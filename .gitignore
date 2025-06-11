@@ -1,0 +1,23 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+.skjold_cache/
+
+# Virtual environments
+.venv
+.idea
+.env
+.python-version
+scripts/synthetic_data.lance
+postgres/01_redraytest_dump.sql
+postgres/02_function_total_gross_premium.sql
+postgres/03_function_get_last_endorsements_id.sql
+postgres/04_function_get_premiums.sql
+
+
+*.gradio/

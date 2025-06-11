@@ -1,0 +1,113 @@
+import asyncio
+import logging
+from contextlib import asynccontextmanager
+from uuid import UUID
+
+from fastapi import FastAPI
+from pydantic import BaseModel, field_validator
+from ray import serve
+
+from app.adapters.out.adapter_factory import (
+    build_cache_adapter,
+    build_guardrail_adapter,
+    build_kitsune_db_adapter,
+    build_knowledge_base_adapter,
+    build_llm_adapter,
+)
+from app.application.chatbot import KitsuneChatbot
+
+
+class ChatRequest(BaseModel):
+    session_id: UUID
+    question: str
+
+    @field_validator("question")
+    def validate_question(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Question cannot be empty or whitespace")
+        return value
+
+
+@asynccontextmanager
+async def lifespan(fastapi_app: FastAPI):
+    logger = logging.getLogger("ray.serve")
+    logger.setLevel(logging.INFO)
+    service_errors = []
+
+    # Test Redis cache connectivity
+    cache_adapter = build_cache_adapter()
+    if not await cache_adapter.ping():
+        service_errors.append("Redis cache connectivity test failed.")
+
+    # Testing lancedb
+    lancedb_adapter = await build_knowledge_base_adapter()
+    if not await lancedb_adapter.ping():
+        service_errors.append("Knowledge DB connection is not open.")
+
+    # Test LLM connectivity
+    llm_adapter = build_llm_adapter()
+    if not await llm_adapter.ping():
+        service_errors.append("LLM connectivity test failed.")
+
+    # Test Database connectivity
+    kitsune_db_adapter = build_kitsune_db_adapter()
+    if not await kitsune_db_adapter.ping():
+        service_errors.append("Database connectivity test failed.")
+
+    # Test Guardrails connectivity
+    guardrail_adapter = build_guardrail_adapter()
+    if not await guardrail_adapter.ping():
+        service_errors.append("Guardrails service connectivity test failed.")
+
+    if service_errors:
+        logger.error("\n".join(service_errors))
+    else:
+        yield
+
+
+fastapi_app = FastAPI(lifespan=lifespan)
+
+
+@serve.deployment
+class ChatbotService:
+    def __init__(self):  # New parameter
+        self.agent = None
+        self._initialized = False
+        self._lock = asyncio.Lock()
+        self.logger = logging.getLogger("ray.serve")
+
+    async def _async_init(self):
+        if not self._initialized:
+            async with self._lock:
+                if not self._initialized:  # Double-check inside the lock
+                    self.logger.info("Initializing the chatbot agent...")
+                    lancedb_adapter = await build_knowledge_base_adapter()
+                    self.agent = KitsuneChatbot(
+                        cache=build_cache_adapter(),
+                        knowledge_base=lancedb_adapter,
+                        kitsune_db=build_kitsune_db_adapter(),
+                        llm=build_llm_adapter(),
+                        guardrail=build_guardrail_adapter(),
+                        logger=self.logger,
+                    )
+                    self._initialized = True
+                    self.logger.info("Chatbot agent initialized successfully.")
+
+    async def answer(self, question: str) -> str:
+        await self._async_init()
+        return await self.agent.answer(question)
+
+
+@serve.deployment
+@serve.ingress(fastapi_app)
+class ChatbotAPIIngress:
+    def __init__(self, chatbot_handle):
+        self.chatbot_handle = chatbot_handle
+
+    @fastapi_app.post("/chat")
+    async def chat(self, request: ChatRequest):
+        response = await self.chatbot_handle.answer.remote(request.question)
+        return {"answer": response}
+
+
+entrypoint = ChatbotAPIIngress.bind(ChatbotService.bind())  # type: ignore

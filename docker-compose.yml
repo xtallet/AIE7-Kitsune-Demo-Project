@@ -1,0 +1,39 @@
+services:
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: on-failure
+    ports:
+      - '6380:6380'
+    environment:
+      - REDIS_PASSWORD=mysecretpassword
+    command: /bin/sh -c "redis-server --port 6380 --save 20 1 --loglevel warning --requirepass $$REDIS_PASSWORD"
+    volumes:
+      - redis:/data
+    networks:
+      - chatbot_network
+
+  postgres:
+    image: postgres:16
+    container_name: postgres_agente
+    environment:
+      POSTGRES_USER: data_app
+      POSTGRES_PASSWORD: data12345
+      POSTGRES_DB: datadb
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres/01_redraytest_dump.sql:/docker-entrypoint-initdb.d/01_redraytest_dump.sql
+      - ./postgres/02_function_total_gross_premium.sql:/docker-entrypoint-initdb.d/02_function_total_gross_premium.sql
+      - ./postgres/03_function_get_last_endorsements_id.sql:/docker-entrypoint-initdb.d/03_function_get_last_endorsements_id.sql
+      - ./postgres/04_function_get_premiums.sql:/docker-entrypoint-initdb.d/04_function_get_premiums.sql
+    networks:
+      - chatbot_network
+
+volumes:
+  redis:
+    driver: local
+
+networks:
+  chatbot_network:
+    driver: bridge

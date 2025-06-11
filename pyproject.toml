@@ -1,0 +1,42 @@
+[project]
+name = "inari-henzuru-data"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12.5,<3.13"
+packages = [
+    { include = "app", from = "." }
+]
+dependencies = [
+    "agno>=1.4.5",
+    "dotenv>=0.9.9",
+    "lancedb>=0.22.0",
+    "openai>=1.77.0",
+    "pandas>=2.2.3",
+    "psycopg>=3.2.9",
+    "pydantic-settings>=2.9.1",
+    "python-dotenv>=1.1.0",
+    "redis>=6.0.0",
+    "requests>=2.32.3",
+    "ray[serve]>=2.46.0",
+    "transformers[torch]>=4.52.3",
+    "pydantic>=2.11.4",
+    "guardrails-ai>=0.5.15",
+    "gradio>=5.31.0",
+    "psycopg-binary>=3.2.9",
+]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.2.0",
+    "pytest>=8.3.5",
+    "pytest-mock>=3.14.0",
+]
+
+[tool.skjold]
+report_only = true
+report_format = 'cli'
+sources = ["pyup", "gemnasium"]
+cache_dir = ".skjold_cache"
+cache_expires = 43200
+ignore_file = ".skjoldignore"
