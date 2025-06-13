@@ -1,6 +1,8 @@
 import logging
 from typing import Optional, Tuple
 
+from adapters.out.agent_adapter import ChatbotAgentAdapter
+
 from app.domain.ports.cache_port import Cache
 from app.domain.ports.chatbot_port import ChatbotInterface
 from app.domain.ports.guardrail_port import GuardrailInterface
@@ -18,6 +20,7 @@ class KitsuneChatbot(ChatbotInterface):
         llm: LLM,
         guardrail: GuardrailInterface,
         logger: logging.Logger,
+        chatbot_agent: ChatbotAgentAdapter,
     ) -> None:
         super().__init__()
         self.cache_service = cache
@@ -26,6 +29,7 @@ class KitsuneChatbot(ChatbotInterface):
         self.llm_service = llm
         self.guardrail_service = guardrail
         self.logger = logger
+        self.chatbot_agent = chatbot_agent
 
     async def answer(self, question: str) -> str:
         self.logger.info(f"Question received: {question}")
@@ -65,14 +69,16 @@ class KitsuneChatbot(ChatbotInterface):
 
     async def _get_natural_language_answer(self, question: str, sql_query: str) -> str:
         try:
-            sql_answer = await self.kitsune_db_service.run_sql_query(sql_query)
+            sql_answer = await self.kitsune_db_service.run_sql_query(query=sql_query)
         except RuntimeError as e:
             self.logger.exception(
                 "An exception has been raised when executing SQL query", e
             )
             return "We cannot answer this question right now."
 
-        nl_answer = await self.llm_service.summarize_answer(question, sql_answer)
+        nl_answer = await self.chatbot_agent.run(
+            user_question=question, context={"sql_answer": sql_answer}
+        )
         self.logger.debug(f"Question: {question}.\n Summarized answer: {nl_answer}")
 
         return nl_answer

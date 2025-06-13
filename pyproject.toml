@@ -21,9 +21,10 @@ dependencies = [
     "ray[serve]>=2.46.0",
     "transformers[torch]>=4.52.3",
     "pydantic>=2.11.4",
-    "guardrails-ai>=0.5.15",
     "gradio>=5.31.0",
     "psycopg-binary>=3.2.9",
+    "guardrails-ai>=0.5.15",
+    "azure-ai-inference>=1.0.0b9",
 ]
 
 [dependency-groups]

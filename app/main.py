@@ -8,6 +8,7 @@ from pydantic import BaseModel, field_validator
 from ray import serve
 
 from app.adapters.out.adapter_factory import (
+    build_agent,
     build_cache_adapter,
     build_guardrail_adapter,
     build_kitsune_db_adapter,
@@ -70,7 +71,7 @@ fastapi_app = FastAPI(lifespan=lifespan)
 
 @serve.deployment
 class ChatbotService:
-    def __init__(self):  # New parameter
+    def __init__(self):
         self.agent = None
         self._initialized = False
         self._lock = asyncio.Lock()
@@ -82,6 +83,7 @@ class ChatbotService:
                 if not self._initialized:  # Double-check inside the lock
                     self.logger.info("Initializing the chatbot agent...")
                     lancedb_adapter = await build_knowledge_base_adapter()
+                    chatbot_agent = build_agent()
                     self.agent = KitsuneChatbot(
                         cache=build_cache_adapter(),
                         knowledge_base=lancedb_adapter,
@@ -89,6 +91,7 @@ class ChatbotService:
                         llm=build_llm_adapter(),
                         guardrail=build_guardrail_adapter(),
                         logger=self.logger,
+                        chatbot_agent=chatbot_agent,
                     )
                     self._initialized = True
                     self.logger.info("Chatbot agent initialized successfully.")
@@ -110,4 +113,4 @@ class ChatbotAPIIngress:
         return {"answer": response}
 
 
-entrypoint = ChatbotAPIIngress.bind(ChatbotService.bind())  # type: ignore
+entrypoint = ChatbotAPIIngress.bind(ChatbotService.bind())  # type: ignore[attr-defined]

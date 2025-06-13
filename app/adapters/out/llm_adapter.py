@@ -1,5 +1,4 @@
 import logging
-from typing import Any
 
 from openai import AsyncAzureOpenAI
 
@@ -7,7 +6,6 @@ from app.domain.ports.llm_port import LLM
 
 
 class LLMAdapter(LLM):
-
     def __init__(
         self,
         model_name: str,
@@ -60,44 +58,6 @@ class LLMAdapter(LLM):
                 str(e),
             )
             raise RuntimeError("Failed to generate SQL query.") from e
-
-    async def summarize_answer(self, user_question: str, query_result: Any) -> str:
-        """Summarize the answer in natural language based on the user's question and the query result."""
-        system_prompt = (
-            "You are an expert database assistant."
-            "Your task is to provide clear and concise answers in natural language "
-            "based on the results of SQL queries."
-        )
-
-        user_prompt = (
-            f"User Question: {user_question}\n"
-            f"Query Result: {query_result}\n\n"
-            "Provide a one-sentence answer that addresses the user's question."
-        )
-        try:
-            # self.logger.info("Summarizing answer for user question: %s", user_question)
-            self.logger.debug("Query result provided: %s", query_result)
-
-            response = await self.client.chat.completions.create(
-                model=self.model_name,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                temperature=0,
-                max_tokens=2500,
-            )
-
-            summary = response.choices[0].message.content.strip()
-            self.logger.debug("Generated summary: %s", summary)
-            return summary
-        except Exception as e:
-            self.logger.error(
-                "Failed to summarize answer for question: %s, Error: %s",
-                user_question,
-                str(e),
-            )
-            raise RuntimeError("Failed to summarize answer.") from e
 
     async def ping(self) -> bool:
         """Test connectivity with the LLM by sending a simple request.
