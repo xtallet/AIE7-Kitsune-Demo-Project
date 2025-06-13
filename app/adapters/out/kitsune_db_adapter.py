@@ -27,7 +27,6 @@ class KitsuneDBAdapter(KitsuneDB):
 
     async def _get_kitsune_db_client(self) -> AsyncConnection:
         try:
-            # self.logger.info("Connecting to the database at %s:%s", self.host, self.port)
             return await AsyncConnection.connect(
                 host=self.host,
                 port=self.port,
@@ -36,7 +35,7 @@ class KitsuneDBAdapter(KitsuneDB):
                 dbname=self.db_name,
             )
         except Exception as e:
-            self.logger.error("Failed to connect to the database: %s", str(e))
+            self.logger.exception("Failed to connect to the database", e)
             raise RuntimeError("Failed to connect to the database.") from e
 
     async def _format_results_as_string(
@@ -51,7 +50,6 @@ class KitsuneDBAdapter(KitsuneDB):
 
     async def run_sql_query(self, query: str) -> Any:
         try:
-            # self.logger.info("Executing SQL query: %s", query)
             conn = await self._get_kitsune_db_client()
             async with conn.cursor() as cursor:
                 await cursor.execute(f"SET search_path TO {self.db_schema};")
@@ -63,8 +61,8 @@ class KitsuneDBAdapter(KitsuneDB):
             await conn.close()
             return await self._format_results_as_string(results, columns)
         except Exception as e:
-            self.logger.error(
-                "An error occurred while executing the SQL query: %s", str(e)
+            self.logger.exception(
+                f"An error occurred while executing the SQL query: {query}", e
             )
             raise RuntimeError(
                 "An error occurred while executing the SQL query."
@@ -80,7 +78,7 @@ class KitsuneDBAdapter(KitsuneDB):
             async with conn.cursor() as cursor:
                 await cursor.execute("SELECT 1;")
                 result = await cursor.fetchone()
-                self.logger.info("Database ping successful.")
+                self.logger.debug("Database ping successful.")
             await conn.close()
             return result is not None
         except Exception as e:

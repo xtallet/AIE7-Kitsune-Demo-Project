@@ -28,8 +28,10 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "faker>=25.9.2",
     "pre-commit>=4.2.0",
     "pytest>=8.3.5",
+    "pytest-asyncio>=1.0.0",
     "pytest-mock>=3.14.0",
 ]
 

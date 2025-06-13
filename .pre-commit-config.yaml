@@ -21,6 +21,14 @@ repos:
     rev: 0.7.9
     hooks:
       - id: uv-export
+        args: ["--no-dev", "--output-file=requirements.txt"]
+
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    # uv version.
+    rev: 0.7.9
+    hooks:
+      - id: uv-export
+        args: ["--output-file=requirements-dev.txt"]
 
 #  - repo: https://github.com/twu/skjold
 #    rev: v0.6.2
