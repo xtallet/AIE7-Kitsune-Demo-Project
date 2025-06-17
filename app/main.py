@@ -9,11 +9,11 @@ from ray import serve
 
 from app.adapters.out.adapter_factory import (
     build_agent,
+    build_sql_agent,
     build_cache_adapter,
     build_guardrail_adapter,
     build_kitsune_db_adapter,
     build_knowledge_base_adapter,
-    build_llm_adapter,
 )
 from app.application.chatbot import KitsuneChatbot
 
@@ -44,11 +44,6 @@ async def lifespan(fastapi_app: FastAPI):
     lancedb_adapter = await build_knowledge_base_adapter()
     if not await lancedb_adapter.ping():
         service_errors.append("Knowledge DB connection is not open.")
-
-    # Test LLM connectivity
-    llm_adapter = build_llm_adapter()
-    if not await llm_adapter.ping():
-        service_errors.append("LLM connectivity test failed.")
 
     # Test Database connectivity
     kitsune_db_adapter = build_kitsune_db_adapter()
@@ -84,14 +79,15 @@ class ChatbotService:
                     self.logger.info("Initializing the chatbot agent...")
                     lancedb_adapter = await build_knowledge_base_adapter()
                     chatbot_agent = build_agent()
+                    sql_agent = build_sql_agent()
                     self.agent = KitsuneChatbot(
                         cache=build_cache_adapter(),
                         knowledge_base=lancedb_adapter,
                         kitsune_db=build_kitsune_db_adapter(),
-                        llm=build_llm_adapter(),
                         guardrail=build_guardrail_adapter(),
                         logger=self.logger,
                         chatbot_agent=chatbot_agent,
+                        sql_agent=sql_agent,
                     )
                     self._initialized = True
                     self.logger.info("Chatbot agent initialized successfully.")

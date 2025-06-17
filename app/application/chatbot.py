@@ -2,6 +2,7 @@ import logging
 from typing import Optional, Tuple
 
 from app.adapters.out.agent_adapter import ChatbotAgentAdapter
+from app.adapters.out.sql_agent_adapter import SQLAgentAdapter
 from app.domain.ports.cache_port import Cache
 from app.domain.ports.chatbot_port import ChatbotInterface
 from app.domain.ports.guardrail_port import GuardrailInterface
@@ -16,20 +17,19 @@ class KitsuneChatbot(ChatbotInterface):
         cache: Cache,
         knowledge_base: KnowledgeBase,
         kitsune_db: KitsuneDB,
-        llm: LLM,
         guardrail: GuardrailInterface,
         logger: logging.Logger,
         chatbot_agent: ChatbotAgentAdapter,
+        sql_agent: SQLAgentAdapter,
     ) -> None:
         super().__init__()
         self.cache_service = cache
         self.knowledge_base_service = knowledge_base
         self.kitsune_db_service = kitsune_db
-        self.llm_service = llm
         self.guardrail_service = guardrail
         self.logger = logger
         self.chatbot_agent = chatbot_agent
-
+        self.sql_agent = sql_agent
     async def answer(self, question: str) -> str:
         self.logger.info(f"Question received: {question}")
 
@@ -57,8 +57,8 @@ class KitsuneChatbot(ChatbotInterface):
         return None
 
     async def _get_sql_from_model(self, question: str) -> Tuple[str, str]:
-        context = await self.knowledge_base_service.search(question)
-        sql_query = await self.llm_service.generate_sql_query(question, context)
+        context = await self.knowledge_base_service.search(query=question)
+        sql_query = await self.sql_agent.run(question=question, context={"example": context})
 
         self.logger.debug(
             f"Question: {question}.\n Generated SQL query: {sql_query}.\n Context: {context}"

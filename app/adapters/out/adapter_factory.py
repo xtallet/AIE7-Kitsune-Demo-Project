@@ -4,11 +4,11 @@ from agno.models.azure import AzureOpenAI
 from openai import AsyncAzureOpenAI, Embedding
 
 from app.adapters.out.agent_adapter import ChatbotAgentAdapter
+from app.adapters.out.sql_agent_adapter import SQLAgentAdapter
 from app.adapters.out.cache_redis_adapter import CacheRedisAdapter, NoOpCacheAdapter
 from app.adapters.out.guardrail_adapter import GuardrailAdapter
 from app.adapters.out.kitsune_db_adapter import KitsuneDBAdapter
 from app.adapters.out.knowledge_lancedb_adapter import KnowledgeLanceDBAdapter
-from app.adapters.out.llm_adapter import LLMAdapter
 from app.config.settings import (
     AzureOpenAIConfig,
     GuardrailConfig,
@@ -67,17 +67,6 @@ def build_kitsune_db_adapter():
     )
 
 
-def build_llm_adapter():
-    azure_config = AzureOpenAIConfig()
-    return LLMAdapter(
-        model_name=azure_config.AZURE_OPENAI_LLM_MODEL,
-        azure_deployment=azure_config.AZURE_OPENAI_LLM_DEPLOYMENT_NAME,
-        azure_endpoint=azure_config.AZURE_OPENAI_API_ENDPOINT,
-        api_version=azure_config.AZURE_OPENAI_API_VERSION,
-        api_key=azure_config.AZURE_OPENAI_API_KEY,
-    )
-
-
 def build_guardrail_adapter():
     guardrail_config = GuardrailConfig()
     azure_config = AzureOpenAIConfig()
@@ -94,5 +83,11 @@ def build_guardrail_adapter():
 def build_agent():
     azure_config = AzureOpenAIConfig()
     return ChatbotAgentAdapter(
+        model=AzureOpenAI(azure_config.AZURE_OPENAI_LLM_DEPLOYMENT_NAME),
+    )
+
+def build_sql_agent():
+    azure_config = AzureOpenAIConfig()
+    return SQLAgentAdapter(
         model=AzureOpenAI(azure_config.AZURE_OPENAI_LLM_DEPLOYMENT_NAME),
     )
