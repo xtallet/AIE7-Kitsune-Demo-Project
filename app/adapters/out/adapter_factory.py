@@ -94,5 +94,5 @@ def build_guardrail_adapter():
 def build_agent():
     azure_config = AzureOpenAIConfig()
     return ChatbotAgentAdapter(
-        model=AzureOpenAI(azure_config.AZURE_OPENAI_LLM_MODEL),
+        model=AzureOpenAI(azure_config.AZURE_OPENAI_LLM_DEPLOYMENT_NAME),
     )
