@@ -38,9 +38,8 @@ class ChatbotAgentAdapter(AgentInterface):
             return response.content
 
         except Exception as e:
-            self.logger.error(
-                "Failed to summarize answer with Agno for question: %s, Error: %s",
-                user_question,
-                str(e),
+            self.logger.exception(
+                f"Failed to summarize answer with Agno for question: {user_question}.",
+                e,
             )
             raise RuntimeError("Failed to summarize answer with Agno agent.") from e

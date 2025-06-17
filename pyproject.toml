@@ -50,4 +50,3 @@ ignore_file = ".skjoldignore"
 [tool.pytest.ini_options]
 python_files = "test_* *_tests.py *_utests.py"
 python_classes = "Test* *Tests"
-

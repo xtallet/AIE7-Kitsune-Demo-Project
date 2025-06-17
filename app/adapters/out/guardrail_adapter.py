@@ -76,7 +76,7 @@ class GuardrailAdapter(GuardrailInterface):
         )
 
         response = self.client.chat.completions.create(
-            model="YOUR_MODEL_NAME",
+            model=self.model_name,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_text},

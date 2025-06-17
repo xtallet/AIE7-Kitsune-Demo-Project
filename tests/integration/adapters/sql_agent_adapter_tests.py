@@ -1,4 +1,5 @@
 import os
+
 import pytest
 from adapters.out.sql_agent_adapter import SQLAgentAdapter
 from agno.models.azure import AzureOpenAI
@@ -10,7 +11,7 @@ load_dotenv()
 
 
 @pytest.mark.skip(
-   "Skipping test for Azure OpenAI due to costs, execute manually when needed."
+    "Skipping test for Azure OpenAI due to costs, execute manually when needed."
 )
 class TestSQLAgent:
     @pytest.mark.asyncio
@@ -40,4 +41,3 @@ class TestSQLAgent:
 
         assert "('RE2500008', 'not_written', Decimal('9000000.0000000'), 1)" in result
         assert "('RE2500019', 'written', Decimal('3000000.0000000'), 1)" in result
-

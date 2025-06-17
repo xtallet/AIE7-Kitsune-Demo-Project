@@ -1,5 +1,6 @@
 from agno.tools.postgres import PostgresTools
-from config.settings import KitsuneDBConfig
+
+from app.config.settings import KitsuneDBConfig
 
 
 class PostgresToolkitFactory:
@@ -15,4 +16,3 @@ class PostgresToolkitFactory:
             db_name=self.kitsune_db_config.POSTGRES_DB,
             table_schema=self.kitsune_db_config.POSTGRES_SCHEMA,
         )
-    

@@ -2,12 +2,13 @@ import json
 import os
 import sys
 
-import lancedb
 from dotenv import load_dotenv
 
 # from utils.embeddings import embed_text
 from lancedb.pydantic import LanceModel, Vector
 from openai import AzureOpenAI
+
+import lancedb
 
 env_vars = load_dotenv()
 

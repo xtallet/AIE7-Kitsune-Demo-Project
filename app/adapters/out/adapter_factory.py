@@ -4,7 +4,6 @@ from agno.models.azure import AzureOpenAI
 from openai import AsyncAzureOpenAI, Embedding
 
 from app.adapters.out.agent_adapter import ChatbotAgentAdapter
-from app.adapters.out.sql_agent_adapter import SQLAgentAdapter
 from app.adapters.out.cache_redis_adapter import CacheRedisAdapter, NoOpCacheAdapter
 from app.adapters.out.guardrail_adapter import GuardrailAdapter
 from app.adapters.out.knowledge_lancedb_adapter import KnowledgeLanceDBAdapter
@@ -55,10 +54,6 @@ def build_knowledge_base_adapter():
     )
 
 
-def build_db_toolkit():
-    return PostgresToolkitFactory()
-
-
 def build_guardrail_adapter():
     guardrail_config = GuardrailConfig()
     azure_config = AzureOpenAIConfig()
@@ -81,8 +76,7 @@ def build_agent():
 
 async def build_sql_agent():
     azure_config = AzureOpenAIConfig()
-    postgres_toolkit = PostgresToolkitFactory().get_db_tools()
     return SQLAgentAdapter(
         model=AzureOpenAI(azure_config.AZURE_OPENAI_LLM_DEPLOYMENT_NAME),
-        postgres_toolkit=postgres_toolkit,
+        postgres_toolkit=PostgresToolkitFactory().get_db_tools(),
     )

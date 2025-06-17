@@ -47,7 +47,6 @@ class CacheRedisAdapter(Cache):
 
     async def get_from_cache(self, key: str) -> Any:
         try:
-            # self.logger.info("Retrieving data from cache with key: %s", key)
             value = await self.client.get(key)
             if not value:
                 self.logger.debug(f"Cache miss for key: {key}")
@@ -55,8 +54,8 @@ class CacheRedisAdapter(Cache):
             data = json.loads(value)
             self.logger.debug(f"Data retrieved from cache: {data}")
             return data
-        except json.JSONDecodeError:
-            self.logger.error(f"Failed to decode JSON from cache for key: {key}")
+        except json.JSONDecodeError as e:
+            self.logger.exception(f"Failed to decode JSON from cache for key: {key}", e)
             return None
         except Exception as e:
             self.logger.exception(
