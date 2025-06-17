@@ -4,7 +4,8 @@ from typing import Dict
 from agno.agent import Agent
 from agno.models.base import Model
 from agno.run.response import RunResponse
-from domain.ports.agent_port import AgentInterface
+
+from app.domain.ports.agent_port import AgentInterface
 
 
 class ChatbotAgentAdapter(AgentInterface):

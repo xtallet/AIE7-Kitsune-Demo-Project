@@ -53,11 +53,11 @@ class KitsuneDBAdapter(KitsuneDB):
             conn = await self._get_kitsune_db_client()
             async with conn.cursor() as cursor:
                 await cursor.execute(f"SET search_path TO {self.db_schema};")
-                self.logger.debug("Search path set to schema: %s", self.db_schema)
+                self.logger.debug(f"Search path set to schema: {self.db_schema}")
                 await cursor.execute(query)
                 results = await cursor.fetchall()
                 columns = [desc.name for desc in cursor.description]
-                self.logger.debug("Query results: %s", results)
+                self.logger.debug(f"Query results: {results}")
             await conn.close()
             return await self._format_results_as_string(results, columns)
         except Exception as e:

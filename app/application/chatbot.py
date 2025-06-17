@@ -1,8 +1,7 @@
 import logging
 from typing import Optional, Tuple
 
-from adapters.out.agent_adapter import ChatbotAgentAdapter
-
+from app.adapters.out.agent_adapter import ChatbotAgentAdapter
 from app.domain.ports.cache_port import Cache
 from app.domain.ports.chatbot_port import ChatbotInterface
 from app.domain.ports.guardrail_port import GuardrailInterface

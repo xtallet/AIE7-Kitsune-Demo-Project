@@ -1,9 +1,10 @@
 import os
 
 import pytest
-from adapters.out.agent_adapter import ChatbotAgentAdapter
 from agno.models.azure import AzureOpenAI
 from dotenv import load_dotenv
+
+from app.adapters.out.agent_adapter import ChatbotAgentAdapter
 
 load_dotenv()
 

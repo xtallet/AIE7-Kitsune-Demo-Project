@@ -38,6 +38,16 @@ class GuardrailAdapter(GuardrailInterface):
         )
         self.model_name = model_name
         self.allowed_topics = allowed_topics
+        self.guard = AsyncGuard().use(
+            RestrictToTopic(
+                valid_topics=self.allowed_topics,
+                invalid_topics=[],
+                llm_callable=self._azure_llm_callable,
+                disable_classifier=True,
+                disable_llm=False,
+                on_fail="noop",
+            )
+        )
         self.logger = logging.getLogger(self.__class__.__name__)
 
     def _azure_llm_callable(self, user_text, valid_topics):
@@ -83,7 +93,7 @@ class GuardrailAdapter(GuardrailInterface):
             topics = parsed.topics_present
             matching_topic = next((t for t in topics if t in valid_topics), None)
         except (KeyError, PydanticValidationError) as e:
-            logger.error(f"Pydantic parsing failed: {e}")
+            self.logger.exception("Pydantic parsing failed", e)
             matching_topic = None
 
         return ValidationOutcome(
@@ -98,26 +108,16 @@ class GuardrailAdapter(GuardrailInterface):
 
     async def validate_question(self, user_question: str) -> bool:
         try:
-            guard = AsyncGuard().use(
-                RestrictToTopic(
-                    valid_topics=self.allowed_topics,
-                    invalid_topics=[],
-                    llm_callable=self._azure_llm_callable,
-                    disable_classifier=True,
-                    disable_llm=False,
-                    on_fail="noop",
-                )
-            )
-            result = await guard.validate(user_question)
-            logger.info(f"Validation Passed: {result.validation_passed}")
+            result: ValidationOutcome = await self.guard.validate(user_question)
+            self.logger.debug(f"Validation Passed: {result.validation_passed}")
             if not result.validation_passed and result.validation_summaries:
                 reason = result.validation_summaries[0].failure_reason
-                logger.info(f"Failure Reason: {reason}")
+                self.logger.debug(f"Failure Reason: {reason}")
             return result.validation_passed
         except ValidationError as e:
-            logger.warning(f"Invalid Question: {e}")
+            self.logger.warning(f"Invalid Question: {e}")
             if hasattr(e, "errors"):
-                logger.warning(f"Error details: {e.errors}")
+                self.logger.warning(f"Error details: {e.errors}")
             return False
 
     async def ping(self) -> bool:
