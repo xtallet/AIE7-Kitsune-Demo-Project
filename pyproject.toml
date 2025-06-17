@@ -25,6 +25,9 @@ dependencies = [
     "psycopg-binary>=3.2.9",
     "guardrails-ai>=0.5.15",
     "azure-ai-inference>=1.0.0b9",
+    "asyncio>=3.4.3",
+    "pytest-asyncio>=1.0.0",
+    "psycopg2-binary>=2.9.10",
 ]
 
 [dependency-groups]

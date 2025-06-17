@@ -7,8 +7,9 @@ class TestSQLAgent:
     @pytest.mark.asyncio
     async def test_run(self):
       fake_logger = MagicMock()
+      fake_db_tools = MagicMock()
       
-      sql_agent = SQLAgentAdapter(model=MagicMock())
+      sql_agent = SQLAgentAdapter(model=MagicMock(), postgres_toolkit=fake_db_tools)
       sql_agent.logger = fake_logger
       sql_agent.agent = MagicMock()
       sql_agent.agent.arun = AsyncMock()
@@ -27,8 +28,8 @@ class TestSQLAgent:
     @pytest.mark.asyncio
     async def test_run_exception(self):
       fake_logger = MagicMock()
-      
-      sql_agent = SQLAgentAdapter(model=MagicMock())
+      fake_db_tools = MagicMock()
+      sql_agent = SQLAgentAdapter(model=MagicMock(), postgres_toolkit=fake_db_tools)
       
       exception = Exception("error")
       

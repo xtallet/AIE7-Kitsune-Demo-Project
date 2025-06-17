@@ -6,9 +6,7 @@ from app.adapters.out.sql_agent_adapter import SQLAgentAdapter
 from app.domain.ports.cache_port import Cache
 from app.domain.ports.chatbot_port import ChatbotInterface
 from app.domain.ports.guardrail_port import GuardrailInterface
-from app.domain.ports.kitsune_db_port import KitsuneDB
 from app.domain.ports.knowledge_base_port import KnowledgeBase
-from app.domain.ports.llm_port import LLM
 
 
 class KitsuneChatbot(ChatbotInterface):
@@ -16,7 +14,6 @@ class KitsuneChatbot(ChatbotInterface):
         self,
         cache: Cache,
         knowledge_base: KnowledgeBase,
-        kitsune_db: KitsuneDB,
         guardrail: GuardrailInterface,
         logger: logging.Logger,
         chatbot_agent: ChatbotAgentAdapter,
@@ -25,11 +22,11 @@ class KitsuneChatbot(ChatbotInterface):
         super().__init__()
         self.cache_service = cache
         self.knowledge_base_service = knowledge_base
-        self.kitsune_db_service = kitsune_db
         self.guardrail_service = guardrail
         self.logger = logger
         self.chatbot_agent = chatbot_agent
         self.sql_agent = sql_agent
+
     async def answer(self, question: str) -> str:
         self.logger.info(f"Question received: {question}")
 
@@ -37,9 +34,9 @@ class KitsuneChatbot(ChatbotInterface):
             if cache_answer := await self._get_answer_cached(question):
                 return cache_answer
 
-            context, sql_query = await self._get_sql_from_model(question)
-            nl_answer = await self._get_natural_language_answer(question, sql_query)
-            await self._cache_answer(question, context, sql_query, nl_answer)
+            context, sql_answer = await self._get_and_execute_sql_from_model(question)
+            nl_answer = await self._get_natural_language_answer(question, sql_answer)
+            await self._cache_answer(question, context, sql_answer, nl_answer)
         else:
             self.logger.warning(f"Question not related to insurance topics: {question}")
             nl_answer = (
@@ -56,25 +53,19 @@ class KitsuneChatbot(ChatbotInterface):
 
         return None
 
-    async def _get_sql_from_model(self, question: str) -> Tuple[str, str]:
+    async def _get_and_execute_sql_from_model(self, question: str) -> Tuple[str, str]:
         context = await self.knowledge_base_service.search(query=question)
-        sql_query = await self.sql_agent.run(question=question, context={"example": context})
-
-        self.logger.debug(
-            f"Question: {question}.\n Generated SQL query: {sql_query}.\n Context: {context}"
+        sql_answer = await self.sql_agent.run(
+            user_question=question, context={"example": context}
         )
 
-        return context, sql_query
+        self.logger.debug(
+            f"Question: {question}.\n SQL answer: {sql_answer}.\n Context: {context}"
+        )
 
-    async def _get_natural_language_answer(self, question: str, sql_query: str) -> str:
-        try:
-            sql_answer = await self.kitsune_db_service.run_sql_query(query=sql_query)
-        except RuntimeError as e:
-            self.logger.exception(
-                "An exception has been raised when executing SQL query", e
-            )
-            return "We cannot answer this question right now."
+        return context, sql_answer
 
+    async def _get_natural_language_answer(self, question: str, sql_answer: str) -> str:
         nl_answer = await self.chatbot_agent.run(
             user_question=question, context={"sql_answer": sql_answer}
         )
