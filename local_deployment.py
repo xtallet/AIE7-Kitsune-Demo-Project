@@ -41,6 +41,8 @@ applications:
         LANCEDB_TABLE_NAME: "${LANCEDB_TABLE_NAME}"
         LANCEDB_EMBEDDING_MODEL: "${LANCEDB_EMBEDDING_MODEL}"
         ALLOWED_TOPICS: "${ALLOWED_TOPICS}"
+        TOOLKIT_CACHE_ENABLED: "${TOOLKIT_CACHE_ENABLED}"
+        TOOLKIT_CACHE_TTL: "${TOOLKIT_CACHE_TTL}"
     deployments:
       - name: ChatbotAPIIngress
         num_replicas: 1
