@@ -52,6 +52,11 @@ class KitsuneDBConfig(BaseSettings):
     POSTGRES_SCHEMA: str
 
 
+class ToolkitCacheConfig(BaseSettings):
+    TOOLKIT_CACHE_ENABLED: bool
+    TOOLKIT_CACHE_TTL: int
+
+
 class GuardrailConfig(BaseSettings):
     ALLOWED_TOPICS: Any
 

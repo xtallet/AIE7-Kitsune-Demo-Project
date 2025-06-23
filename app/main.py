@@ -8,14 +8,12 @@ from pydantic import BaseModel, field_validator
 from ray import serve
 
 from app.adapters.out.adapter_factory import (
-    build_agent,
     build_cache_adapter,
     build_guardrail_adapter,
     build_knowledge_base_adapter,
-    build_sql_agent,
 )
 from app.application.chatbot import KitsuneChatbot
-
+from app.agents.chat_agent import ChatbotAgent
 
 class ChatRequest(BaseModel):
     session_id: UUID
@@ -71,16 +69,11 @@ class ChatbotService:
             async with self._lock:
                 if not self._initialized:  # Double-check inside the lock
                     self.logger.info("Initializing the chatbot agent...")
-                    lancedb_adapter = await build_knowledge_base_adapter()
-                    chatbot_agent = build_agent()
-                    sql_agent = await build_sql_agent()
                     self.agent = KitsuneChatbot(
                         cache=build_cache_adapter(),
-                        knowledge_base=lancedb_adapter,
                         guardrail=build_guardrail_adapter(),
                         logger=self.logger,
-                        chatbot_agent=chatbot_agent,
-                        sql_agent=sql_agent,
+                        chatbot_agent=ChatbotAgent(),
                     )
                     self._initialized = True
                     self.logger.info("Chatbot agent initialized successfully.")

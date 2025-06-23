@@ -1,13 +1,6 @@
-import os
-
 import pytest
-from adapters.out.sql_agent_adapter import SQLAgentAdapter
-from agno.models.azure import AzureOpenAI
-from dotenv import load_dotenv
 
-from app.adapters.out.postgres_toolkit_factory import PostgresToolkitFactory
-
-load_dotenv()
+from app.agents.sql_agent import SQLAgent
 
 
 @pytest.mark.skip(
@@ -16,12 +9,6 @@ load_dotenv()
 class TestSQLAgent:
     @pytest.mark.asyncio
     async def test_agent_connection_and_response(self):
-        toolkit = PostgresToolkitFactory().get_db_tools()
-        agent = SQLAgentAdapter(
-            model=AzureOpenAI(os.getenv("AZURE_OPENAI_LLM_TESTING_DEPLOYMENT_NAME")),
-            postgres_toolkit=toolkit,
-        )
-
         context = (
             "question: Which policy has the highest premium in our portfolio?"
             "cot: Q: Which policy has the highest premium in our portfolio? A: The primary data is provided through the custom PostgreSQL function 'get_premiums()'. This custom function internally calculates the premium of the policy and returns: policy_id : This is the policy identifier policy_reference: This is the reference of the policy is_endorsement : Boolean field which indicates if the policy is an endorsement or not status_group : which has 2 options 'written' and 'not_written' premium: the amount of the policy premium We started the query with a CTE to use a Window function \u201cROW_NUMBER() OVER (PARTITION BY status_group ORDER BY premium DESC nulls last) AS row_num\u201c to sort the premiums from highest to lowest of each status and be sure to pull the null values to the end since to return a numeric value is mandatory. Finally, we select the main fields to return \u201cpolicy_reference, status_group, premium, row_num\u201c from our CTE and select the first already-ordered result. The query SQL is: WITH ranked_premiums AS (SELECT policy_reference, status_group, premium, ROW_NUMBER() OVER (PARTITION BY status_group ORDER BY premium DESC nulls last) AS row_num FROM get_premiums()) SELECT policy_reference, status_group, premium, row_num FROM ranked_premiums WHERE row_num = 1 and policy_reference IS NOT NULL ORDER BY status_group; "
@@ -34,9 +21,10 @@ class TestSQLAgent:
             "sql_query: SELECT policy_reference, AVG(premium) AS premium_average FROM get_premiums() GROUP BY policy_reference ORDER BY policy_reference ASC"
         )
 
+        agent = SQLAgent(context=context)
+
         result = await agent.run(
             user_question="Which policy has the highest premium in our portfolio?",
-            context={"example": context},
         )
 
         assert "('RE2500008', 'not_written', Decimal('9000000.0000000'), 1)" in result
