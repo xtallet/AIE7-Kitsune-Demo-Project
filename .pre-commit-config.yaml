@@ -15,10 +15,11 @@ repos:
     rev: 0.7.9
     hooks:
       - id: uv-lock
+        args: ["--prerelease=allow"]
       - id: uv-export
-        args: ["--no-dev", "--output-file=requirements.txt"]
+        args: ["--no-dev", "--output-file=requirements.txt", "--prerelease=allow"]
       - id: uv-export
-        args: ["--output-file=requirements-dev.txt"]
+        args: ["--output-file=requirements-dev.txt", "--prerelease=allow"]
 
 #  - repo: https://github.com/twu/skjold
 #    rev: v0.6.2

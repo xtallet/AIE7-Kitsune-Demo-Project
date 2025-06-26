@@ -1,0 +1,261 @@
+apiVersion: ray.io/v1
+kind: RayService
+metadata:
+  name: chatbot
+  annotations:
+    ray.io/ft-enabled: "true"
+spec:
+  serveConfigV2: |
+    applications:
+      - name: KitsuneChatbot
+        route_prefix: /kitsune-chatbot
+        import_path: app.main:entrypoint
+        deployments:
+          - name: ChatbotAPIIngress
+            num_replicas: 1
+            max_replicas_per_node: 1
+            max_ongoing_requests: 5
+            ray_actor_options:
+              num_cpus: 0.25
+              num_gpus: 0
+            logging_config:
+              encoding: TEXT
+              enable_access_log: False
+              log_level: INFO
+              logs_dir: null
+          - name: ChatbotService
+            num_replicas: 1
+            max_replicas_per_node: 1
+            ray_actor_options:
+              num_cpus: 0.25
+              num_gpus: 0
+            logging_config:
+              encoding: TEXT
+              enable_access_log: False
+              log_level: INFO
+              logs_dir: null
+  rayClusterConfig:
+    rayVersion: '2.32.0-py311-cpu'
+    headGroupSpec:
+      headService:
+        metadata:
+          name: chatbot-raycluster
+      rayStartParams:
+        dashboard-host: '0.0.0.0'
+      template:
+        metadata:
+          annotations:
+            imageName: "harbor.tech.inari.io/data/cbot-server"
+            buildVersion: "local"
+        spec:
+          containers:
+          - name: chatbot-head
+            image: harbor.tech.inari.io/kitsune/cbot-server:local
+            env:
+            - name: PYTHONPATH
+              value: "/server_app"
+            - name: TZ
+              value: "Europe/Madrid"
+            - name: POSTGRES_HOST
+              value: "postgres-postgresql"
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_DB
+              value: "datadb"
+            - name: POSTGRES_USER
+              value: "data_app"
+            - name: POSTGRES_SCHEMA
+              value: "redray"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: chatbot
+                  key: postgres-password
+            - name: AZURE_OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: chatbot
+                  key: azure_openai_api_key
+            - name: AZURE_OPENAI_API_ENDPOINT
+              value: "https://inari-yomeru.openai.azure.com/"
+            - name: AZURE_OPENAI_ENDPOINT
+              value: "https://inari-yomeru.openai.azure.com/"
+            - name: AZURE_OPENAI_API_VERSION
+              value: "2023-03-15-preview"
+            - name: AZURE_OPENAI_LLM_MODEL
+              value: "gpt-4o"
+            - name: AZURE_OPENAI_LLM_TESTING_DEPLOYMENT_NAME
+              value: "inari-yomeru-gpt-4o"
+            - name: AZURE_OPENAI_LLM_DEPLOYMENT_NAME
+              value: "inari-yomeru-gpt-4o"
+            - name: AZURE_OPENAI_EMBEDDING_MODEL
+              value: "text-embedding-ada-002"
+            - name: AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME
+              value: "inari-yomeru-embedding"
+            - name: REDIS_ENABLE_FLAG
+              value: "0"
+            - name: REDIS_HOST
+              value: "redis-master"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: chatbot
+                  key: redis-password
+            - name: REDIS_DB
+              value: "0"
+            - name: REDIS_CACHE_TTL
+              value: "84600"
+            - name: RAY_DEDUP_LOGS
+              value: "0"
+            - name: LOG_TOKENS_USED
+              value: "1"
+            - name: DATA_EXTRACTION_MAX_ONGOING_REQUESTS
+              value: "5"
+            - name: ALLOWED_TOPICS
+              value: "insurance policies,claims,coverage,premiums,renewals"
+            - name: LANCEDB_PATH
+              value: "gs://data-test.inari.io/KitsuneAI/lancedb"
+            - name: LANCEDB_TABLE_NAME
+              value: "synthetic_data"
+            - name: LANCEDB_EMBEDDING_MODEL
+              value: "inari-yomeru-embedding"
+            - name: AWS_REGION_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: chatbot
+                  key: aws-region
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: chatbot
+                  key: aws-access-key-id
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: chatbot
+                  key: aws-secret-access-key
+            - name: AWS_SESSION_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: chatbot
+                  key: aws-session-token
+            ports:
+            - containerPort: 6379
+              name: gcs-server
+            - containerPort: 8265
+              name: dashboard
+            - containerPort: 10001
+              name: client
+            - containerPort: 8000
+              name: serve
+    workerGroupSpecs:
+    - replicas: 1
+      minReplicas: 1
+      maxReplicas: 2
+      groupName: chatbot-workers
+      rayStartParams: {}
+      template:
+        metadata:
+          annotations:
+            imageName: "harbor.tech.inari.io/data/cbot-server"
+            buildVersion: "local"
+        spec:
+          containers:
+          - name: chatbot-worker
+            image: harbor.tech.inari.io/kitsune/cbot-server:local
+            env:
+            - name: PYTHONPATH
+              value: "/server_app"
+            - name: TZ
+              value: "Europe/Madrid"
+            - name: POSTGRES_HOST
+              value: "postgres-postgresql"
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_DB
+              value: "datadb"
+            - name: POSTGRES_USER
+              value: "data_app"
+            - name: POSTGRES_SCHEMA
+              value: "redray"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: chatbot
+                  key: postgres-password
+            - name: AZURE_OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: chatbot
+                  key: azure_openai_api_key
+            - name: AZURE_OPENAI_API_ENDPOINT
+              value: "https://inari-yomeru.openai.azure.com/"
+            - name: AZURE_OPENAI_ENDPOINT
+              value: "https://inari-yomeru.openai.azure.com/"
+            - name: AZURE_OPENAI_API_VERSION
+              value: "2023-03-15-preview"
+            - name: AZURE_OPENAI_LLM_MODEL
+              value: "gpt-4o"
+            - name: AZURE_OPENAI_LLM_TESTING_DEPLOYMENT_NAME
+              value: "inari-yomeru-gpt-4o"
+            - name: AZURE_OPENAI_LLM_DEPLOYMENT_NAME
+              value: "inari-yomeru-gpt-4o"
+            - name: AZURE_OPENAI_EMBEDDING_MODEL
+              value: "text-embedding-ada-002"
+            - name: AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME
+              value: "inari-yomeru-embedding"
+            - name: REDIS_ENABLE_FLAG
+              value: "0"
+            - name: REDIS_HOST
+              value: "redis-master"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: chatbot
+                  key: redis-password
+            - name: REDIS_DB
+              value: "0"
+            - name: REDIS_CACHE_TTL
+              value: "84600"
+            - name: RAY_DEDUP_LOGS
+              value: "0"
+            - name: LOG_TOKENS_USED
+              value: "1"
+            - name: DATA_EXTRACTION_MAX_ONGOING_REQUESTS
+              value: "5"
+            - name: ALLOWED_TOPICS
+              value: "insurance policies,claims,coverage,premiums,renewals"
+            - name: LANCEDB_PATH
+              value: "gs://data-test.inari.io/KitsuneAI/lancedb"
+            - name: LANCEDB_TABLE_NAME
+              value: "synthetic_data"
+            - name: LANCEDB_EMBEDDING_MODEL
+              value: "inari-yomeru-embedding"
+            - name: AWS_REGION_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: chatbot
+                  key: aws-region
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: chatbot
+                  key: aws-access-key-id
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: chatbot
+                  key: aws-secret-access-key
+            - name: AWS_SESSION_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: chatbot
+                  key: aws-session-token
+            lifecycle:
+              preStop:
+                exec:
+                  command: ["/bin/sh", "-c", "ray stop"]

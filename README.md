@@ -1,3 +1,11 @@
+# Table of Contents
+
+<!-- TOC -->
+* [Kitsune Chatbot](#kitsune-chatbot)
+  * [Local Deployment with Ray Serve (No k8s)](#local-deployment-with-ray-serve-no-k8s)
+  * [Local Deployment with Ray Serve and k8s](#local-deployment-with-ray-serve-and-k8s)
+
+
 # Kitsune Chatbot
 
 This project is a chatbot that can answer questions about Kitsune platform.
@@ -38,6 +46,65 @@ The chatbot can run locally:
 - To check Ray Serve status: `make ray-serve-status`.
 - To stop the Ray Serve deployment: `make ray-serve-down`.
 - To stop the Ray cluster: `make ray-stop`.
+
+## Local Deployment with Ray Serve and k8s
+
+### Prerequisites
+- A k8s cluster is running. If not you can run: `make minikube-start`.
+Please note it will start minikube with 3 CPUs and 8GB of RAM. In case you don want to start it
+with these resources, you can simply run `minikube start` and it will use the default resources.
+
+
+### Deployment commands
+#### IMPORTANT !
+**1 -** Before running the deployment commands, make sure you have the Guardrail Token configured as environment variable.\
+It is used in the `make cbot-build` command when installing the RestrictToTopic validator.\
+`export GUARDRAILS_HUB_TOKEN=[your_token_here]`
+
+**2 -** Once all steps are completed, before test the chatbot, you need to restore the dump files placed into the "postgres" folder.\
+You can do it by running the following command: `make psql-restore`
+
+### Follow the commands below to deploy the chatbot to KubeRay:
+```bash
+make minikube-start                     # Start the minikube
+make cbot-build                         # Build the chatbot image
+make minikube-save                      # Save the image to minikube
+make gcloud-auth                        # Authenticate with Google Cloud
+make minikube-enable-gcp-auth           # Enable GCP auth for minikube
+make kuberay-up                         # Start the KubeRay operator
+make deploy                             # Deploy the chatbot to KubeRay
+make port-forward-ray-cluster-fast-api  # Port forward the ray cluster and fast api (run in separate terminal)
+```
+### Additional Steps
+In case you need to recreate your local environment fomr scratch, you can run the following commands:
+```bash
+uv clean
+rm -rf .venv
+uv venv
+source .venv/bin/activate
+uv sync --prerelease=allow
+uv add guardrails-ai==0.6.6 --prerelease=allow
+uv sync --all-groups --prerelease=allow
+guardrails configure --token <YOUR_TOKEN>
+guardrails hub install hub://tryolabs/restricttotopic
+```
+To check if the RestrictToTopic validator is installed, run: `guardrails hub list`. \
+You should see "Installed Validators: RestrictToTopic".
+
+To delete the deployment, maintaining the k8s resources such as secrets and namespace, you can run:
+```bash
+make down          # To delete the deployment
+make kuberay-down  # To delete the KubeRay operator
+```
+
+### Testing the chatbot
+Once the deployment is started you can follow it from the minikube dashboard (run it in a separate terminal):\
+`minikube dashboard`
+
+Once all pods are running, you can access de Ray cluster at : `http://localhost:8265` \
+Once the deployment is ready, you can test the Chatbot FastAPI endpoint at: `http://localhost:8000/kitsune-chatbot/docs`
+
+
 
 ## TODO TASKS YOU SHOULD REVIEW
 - Review Elvin's analysis on the best settings to use. For example, on the embedding model, we are using the already deployed to our Inari's azure openai account `text-embedding-ada-002`, but from his tests, the embedding model `small embeddings text 3` has better performance and more accuracy.
