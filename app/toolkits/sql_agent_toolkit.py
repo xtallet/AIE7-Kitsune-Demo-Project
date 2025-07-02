@@ -14,7 +14,7 @@ toolkit_cache_config = ToolkitCacheConfig()
 @tool(
     name="sql_agent",
     description="Generate an SQL and execute it",
-    show_result=True,
+    show_result=False,
     cache_results=toolkit_cache_config.TOOLKIT_CACHE_ENABLED,
     cache_ttl=toolkit_cache_config.TOOLKIT_CACHE_TTL,
     cache_dir="/tmp/sql_agent_cache",
