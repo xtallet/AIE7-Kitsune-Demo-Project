@@ -1,10 +1,9 @@
 import logging
-from typing import Dict
+from typing import Dict, Optional
 
 from agno.agent import Agent
-from agno.models.base import Model
-from agno.run.response import RunResponse
 from agno.models.azure import AzureOpenAI
+from agno.run.response import RunResponse
 
 from app.agents.agent_port import AgentInterface
 from app.config.settings import (
@@ -12,10 +11,11 @@ from app.config.settings import (
 )
 from app.toolkits.postgres_toolkit import postgres_toolkit
 
+
 class SQLAgent(AgentInterface):
-    def __init__(self, context):
+    def __init__(self, context: Dict) -> None:
         config = AzureOpenAIConfig()
-        
+
         self.agent = Agent(
             model=AzureOpenAI(config.AZURE_OPENAI_LLM_DEPLOYMENT_NAME),
             description=(
@@ -32,17 +32,21 @@ class SQLAgent(AgentInterface):
             ),
             add_context=True,
             tools=[postgres_toolkit],
-            context=context
+            context=context,
         )
 
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    async def run(self, user_question: str) -> str:
+    async def run(
+        self,
+        user_question: str,
+        user_id: Optional[str],
+        session_id: Optional[str],
+    ) -> str:
         try:
             self.logger.debug("Querying Agno agent for sql generation")
             self.logger.debug("User question: %s", user_question)
 
-            #self.agent.context = context
             response: RunResponse = await self.agent.arun(user_question)
 
             self.logger.debug("Generated sql from Agno: %s", response.content)

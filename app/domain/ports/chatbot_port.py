@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Optional, Tuple
 
 
 class ChatbotInterface(ABC):
@@ -8,5 +9,7 @@ class ChatbotInterface(ABC):
     """
 
     @abstractmethod
-    async def answer(self, question: str) -> str:
+    async def answer(
+        self, question: str, user_id: str, session_id: Optional[str] = None
+    ) -> Tuple[str, str]:
         pass

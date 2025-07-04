@@ -19,7 +19,7 @@ toolkit_cache_config = ToolkitCacheConfig()
     cache_ttl=toolkit_cache_config.TOOLKIT_CACHE_TTL,
     cache_dir="/tmp/sql_agent_cache",
 )
-async def sql_agent_toolkit(user_question: str):
+async def sql_agent_toolkit(user_question: str) -> str:
     """Use this function to get the information from the database.
 
     Args:
@@ -33,7 +33,9 @@ async def sql_agent_toolkit(user_question: str):
         context = await lancedb_adapter.search(query=user_question)
         agent = SQLAgent(context)
 
-        result = await agent.run(user_question=user_question)
+        result = await agent.run(
+            user_question=user_question, user_id=None, session_id=None
+        )
     except Exception as e:
         sql_agent_logger.exception("Failed to get context from LanceDB adapter", e)
         return "Could not retreive the requested information from the database"

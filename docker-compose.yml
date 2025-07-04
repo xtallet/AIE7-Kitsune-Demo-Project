@@ -18,7 +18,7 @@ services:
     container_name: postgres_agente
     environment:
       POSTGRES_USER: data_app
-      POSTGRES_PASSWORD: data12345
+      POSTGRES_PASSWORD: data12345 # pragma: allowlist secret
       POSTGRES_DB: datadb
     ports:
       - "5432:5432"
@@ -30,8 +30,41 @@ services:
     networks:
       - chatbot_network
 
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: user
+      MONGO_INITDB_ROOT_PASSWORD: password # pragma: allowlist secret
+      MONGO_INITDB_DATABASE: admin
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - chatbot_network
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo-express
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: user
+      ME_CONFIG_MONGODB_ADMINPASSWORD: password # pragma: allowlist secret
+      ME_CONFIG_MONGODB_URL: mongodb://user:password@mongodb:27017/ # pragma: allowlist secret
+    networks:
+      - chatbot_network
+    depends_on:
+      - mongodb
+
 volumes:
   redis:
+    driver: local
+
+  mongodb_data:
     driver: local
 
 networks:

@@ -25,6 +25,8 @@ class TestSQLAgent:
 
         result = await agent.run(
             user_question="Which policy has the highest premium in our portfolio?",
+            user_id=None,
+            session_id=None,
         )
 
         assert "('RE2500008', 'not_written', Decimal('9000000.0000000'), 1)" in result

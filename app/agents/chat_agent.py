@@ -1,26 +1,36 @@
 import logging
-from typing import Dict, Callable
+from typing import Optional
 
+from agents.memory import get_storage_db
 from agno.agent import Agent
-from agno.models.base import Model
+from agno.models.azure import AzureOpenAI
 from agno.run.response import RunResponse
 
 from app.agents.agent_port import AgentInterface
-from agno.models.azure import AzureOpenAI
 from app.config.settings import AzureOpenAIConfig
 from app.toolkits.sql_agent_toolkit import sql_agent_toolkit
 
+
 class ChatbotAgent(AgentInterface):
     def __init__(self) -> None:
-        config = AzureOpenAIConfig()
-        
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.azureOpenAiconfig = AzureOpenAIConfig()
+
+    def _init_agent(self, user_id: Optional[str], session_id: Optional[str]) -> None:
+        model = AzureOpenAI(self.azureOpenAiconfig.AZURE_OPENAI_LLM_DEPLOYMENT_NAME)
+
         self.agent = Agent(
-            model=AzureOpenAI(config.AZURE_OPENAI_LLM_DEPLOYMENT_NAME),
+            model=model,
+            session_id=session_id,
+            user_id=user_id,
+            enable_agentic_memory=True,
+            enable_user_memories=True,
+            storage=get_storage_db(user_id=user_id),
+            add_history_to_messages=True,
             description=(
                 "You are an expert database assistant."
                 "Your task is to provide clear and concise answers in natural language"
                 "Use the toolkit function to get the information from the database."
-                #"based on the results of SQL queries."
             ),
             instructions=(
                 "You will receive a user question."
@@ -29,18 +39,25 @@ class ChatbotAgent(AgentInterface):
             ),
             tools=[sql_agent_toolkit],
         )
-        self.logger = logging.getLogger(self.__class__.__name__)
 
-    async def run(self, user_question: str) -> str:
+    async def run(
+        self,
+        user_question: str,
+        user_id: Optional[str],
+        session_id: Optional[str],
+    ) -> str:
         try:
             self.logger.debug("Querying Agno agent for summarization")
             self.logger.debug("User question: %s", user_question)
 
-            response: RunResponse = await self.agent.arun(user_question)
+            self._init_agent(user_id, session_id)
+
+            response: RunResponse = await self.agent.arun(
+                message=user_question, user_id=user_id
+            )
 
             self.logger.debug("Generated summary from Agno: %s", response.content)
             return response.content
-
         except Exception as e:
             self.logger.exception(
                 f"Failed to summarize answer with Agno for question: {user_question}.",

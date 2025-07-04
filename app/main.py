@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from uuid import UUID
+from typing import Optional, Tuple
 
 from fastapi import FastAPI
 from pydantic import BaseModel, field_validator
@@ -12,11 +12,13 @@ from app.adapters.out.adapter_factory import (
     build_guardrail_adapter,
     build_knowledge_base_adapter,
 )
-from app.application.chatbot import KitsuneChatbot
 from app.agents.chat_agent import ChatbotAgent
+from app.application.chatbot import KitsuneChatbot
+
 
 class ChatRequest(BaseModel):
-    session_id: UUID
+    user_id: str
+    session_id: Optional[str]
     question: str
 
     @field_validator("question")
@@ -78,9 +80,11 @@ class ChatbotService:
                     self._initialized = True
                     self.logger.info("Chatbot agent initialized successfully.")
 
-    async def answer(self, question: str) -> str:
+    async def answer(
+        self, question: str, user_id: str, session_id: Optional[str] = None
+    ) -> Tuple[str, str]:
         await self._async_init()
-        return await self.agent.answer(question)
+        return await self.agent.answer(question, user_id, session_id)
 
 
 @serve.deployment
@@ -91,8 +95,10 @@ class ChatbotAPIIngress:
 
     @fastapi_app.post("/chat")
     async def chat(self, request: ChatRequest):
-        response = await self.chatbot_handle.answer.remote(request.question)
-        return {"answer": response}
+        response, session_id = await self.chatbot_handle.answer.remote(
+            request.question, request.user_id, request.session_id
+        )
+        return {"answer": response, "session_id": session_id}
 
 
 entrypoint = ChatbotAPIIngress.bind(ChatbotService.bind())  # type: ignore[attr-defined]

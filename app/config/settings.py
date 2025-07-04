@@ -53,8 +53,8 @@ class KitsuneDBConfig(BaseSettings):
 
 
 class ToolkitCacheConfig(BaseSettings):
-    TOOLKIT_CACHE_ENABLED: bool
-    TOOLKIT_CACHE_TTL: int
+    TOOLKIT_CACHE_ENABLED: bool = True
+    TOOLKIT_CACHE_TTL: int = 3600
 
 
 class GuardrailConfig(BaseSettings):
@@ -66,3 +66,7 @@ class GuardrailConfig(BaseSettings):
         if isinstance(value, str):
             return [topic.strip() for topic in value.split(",")]
         return value
+
+
+class MongoDBConfig(BaseSettings):
+    MONGODB_URI: str
