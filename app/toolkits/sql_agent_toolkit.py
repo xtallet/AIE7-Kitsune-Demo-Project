@@ -1,5 +1,6 @@
 import logging
 
+from agno.exceptions import StopAgentRun
 from agno.tools import tool
 
 from app.adapters.out.adapter_factory import build_knowledge_base_adapter
@@ -7,6 +8,7 @@ from app.agents.sql_agent import SQLAgent
 from app.config.settings import ToolkitCacheConfig
 
 sql_agent_logger = logging.getLogger("sql_agent_toolkit")
+sql_agent_logger.setLevel(logging.INFO)
 
 toolkit_cache_config = ToolkitCacheConfig()
 
@@ -38,6 +40,6 @@ async def sql_agent_toolkit(user_question: str) -> str:
         )
     except Exception as e:
         sql_agent_logger.exception("Failed to get context from LanceDB adapter", e)
-        return "Could not retreive the requested information from the database"
+        raise StopAgentRun(f"Failed to get context or execute SQL query: {str(e)}")
 
     return result

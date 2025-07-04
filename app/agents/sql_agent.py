@@ -15,6 +15,7 @@ from app.toolkits.postgres_toolkit import postgres_toolkit
 class SQLAgent(AgentInterface):
     def __init__(self, context: Dict) -> None:
         config = AzureOpenAIConfig()
+        self.postgres_toolkit = postgres_toolkit
 
         self.agent = Agent(
             model=AzureOpenAI(config.AZURE_OPENAI_LLM_DEPLOYMENT_NAME),
@@ -31,11 +32,12 @@ class SQLAgent(AgentInterface):
                 "return only the result of the executed query with no extra explanation"
             ),
             add_context=True,
-            tools=[postgres_toolkit],
+            tools=[self.postgres_toolkit],
             context=context,
         )
 
         self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger.setLevel(logging.INFO)
 
     async def run(
         self,

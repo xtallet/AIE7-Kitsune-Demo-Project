@@ -65,6 +65,7 @@ class ChatbotService:
         self._initialized = False
         self._lock = asyncio.Lock()
         self.logger = logging.getLogger("ray.serve")
+        self.logger.setLevel(logging.INFO)
 
     async def _async_init(self):
         if not self._initialized:

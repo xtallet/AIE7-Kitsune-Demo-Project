@@ -1,10 +1,15 @@
 import pytest
+from agno.exceptions import StopAgentRun
 from dotenv import load_dotenv
 from repositories.chat_agent_repository import ChatAgentRepository
 
 from app.agents.chat_agent import ChatbotAgent
 
 load_dotenv()
+
+
+def mock_sql_agent_toolkit():
+    raise StopAgentRun("test")
 
 
 @pytest.mark.skip(
@@ -47,3 +52,20 @@ class TestChatbotAgent:
         last_session = repo.get_last_session(self.test_user_id)
         assert last_session is not None
         assert last_session["session_id"] == session_id
+
+    @pytest.mark.asyncio
+    async def test_agent_connection_and_response_with_error(self):
+        agent = ChatbotAgent()
+        agent.sql_agent_toolkit = mock_sql_agent_toolkit
+        session_id = "123"
+
+        result = await agent.run(
+            user_question="How many policies do I have?",
+            user_id=self.test_user_id,
+            session_id=session_id,
+        )
+
+        assert (
+            result
+            == "I can't respond to that question at this moment, try again later."
+        )

@@ -14,7 +14,9 @@ from app.toolkits.sql_agent_toolkit import sql_agent_toolkit
 class ChatbotAgent(AgentInterface):
     def __init__(self) -> None:
         self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger.setLevel(logging.INFO)
         self.azureOpenAiconfig = AzureOpenAIConfig()
+        self.sql_agent_toolkit = sql_agent_toolkit
 
     def _init_agent(self, user_id: Optional[str], session_id: Optional[str]) -> None:
         model = AzureOpenAI(self.azureOpenAiconfig.AZURE_OPENAI_LLM_DEPLOYMENT_NAME)
@@ -36,8 +38,10 @@ class ChatbotAgent(AgentInterface):
                 "You will receive a user question."
                 "You will obtain the sql response using the toolkit function."
                 "Your response should be a one-sentence answer that addresses the user's question."
+                "If the toolkit function fails, say 'I can't respond to that question at this moment, try again later'."
+                "If you cannot answer the question, say 'I don't have the information to answer that question'."
             ),
-            tools=[sql_agent_toolkit],
+            tools=[self.sql_agent_toolkit],
         )
 
     async def run(
