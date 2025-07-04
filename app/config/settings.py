@@ -1,3 +1,5 @@
+import urllib.parse
+from functools import cached_property
 from typing import Any, List
 
 from pydantic import field_validator
@@ -69,4 +71,13 @@ class GuardrailConfig(BaseSettings):
 
 
 class MongoDBConfig(BaseSettings):
-    MONGODB_URI: str
+    MONGODB_HOST: str
+    MONGODB_USERNAME: str
+    MONGODB_PASSWORD: str
+    MONGODB_PROTOCOL: str = "mongodb"
+
+    @cached_property
+    def connection_string(self) -> str:
+        connection_string = f"{self.MONGODB_PROTOCOL}://"
+        connection_string = f"{connection_string}{urllib.parse.quote_plus(self.MONGODB_USERNAME)}:{urllib.parse.quote_plus(self.MONGODB_PASSWORD)}@{self.MONGODB_HOST}"
+        return connection_string

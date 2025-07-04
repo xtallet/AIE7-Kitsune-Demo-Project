@@ -12,7 +12,7 @@ load_dotenv()
 class ChatAgentRepository:
     def __init__(self) -> None:
         config = MongoDBConfig()
-        self.client = MongoClient(config.MONGODB_URI)
+        self.client = MongoClient(config.connection_string)
         self.db = self.client.chat_storage_db
 
     def create_or_get_last_session(self, user_id: str) -> str:
