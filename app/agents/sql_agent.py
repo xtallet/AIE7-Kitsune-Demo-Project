@@ -30,6 +30,7 @@ class SQLAgent(AgentInterface):
                 "use this context to select the most relevant SQL query"
                 "use 'run_query' function to execute the query passing the sql query as 'query' parameter"
                 "return only the result of the executed query with no extra explanation"
+                "You should only execute select queries, not insert, update or delete queries"
             ),
             add_context=True,
             tools=[self.postgres_toolkit],

@@ -69,3 +69,17 @@ class TestChatbotAgent:
             result
             == "I can't respond to that question at this moment, try again later."
         )
+
+    @pytest.mark.asyncio
+    async def test_insert_data_into_database(self):
+        agent = ChatbotAgent()
+        user_question = "insert a new policy with the following data: policy_id: 123, policy_name: test, policy_description: test"
+        session_id = "123"
+
+        result = await agent.run(
+            user_question=user_question,
+            user_id=self.test_user_id,
+            session_id=session_id,
+        )
+
+        assert result == "I can't insert, update or delete data into the database."

@@ -38,6 +38,7 @@ class ChatbotAgent(AgentInterface):
                 "You will receive a user question."
                 "You will obtain the sql response using the toolkit function."
                 "Your response should be a one-sentence answer that addresses the user's question."
+                "If the toolkit function fails because the user try to execute an insert, update or delete operation, say 'I can't insert, update or delete data into the database'."
                 "If the toolkit function fails, say 'I can't respond to that question at this moment, try again later'."
                 "If you cannot answer the question, say 'I don't have the information to answer that question'."
             ),
