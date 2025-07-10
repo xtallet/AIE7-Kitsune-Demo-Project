@@ -65,7 +65,7 @@ spec:
             - name: POSTGRES_USER
               value: "data_app"
             - name: POSTGRES_SCHEMA
-              value: "redray"
+              value: "demo"
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -81,13 +81,13 @@ spec:
             - name: AZURE_OPENAI_ENDPOINT
               value: "https://inari-yomeru.openai.azure.com/"
             - name: AZURE_OPENAI_API_VERSION
-              value: "2023-03-15-preview"
+              value: "2024-12-01-preview"
             - name: AZURE_OPENAI_LLM_MODEL
-              value: "gpt-4o"
+              value: "gpt-4.1"
             - name: AZURE_OPENAI_LLM_TESTING_DEPLOYMENT_NAME
-              value: "inari-yomeru-gpt-4o"
+              value: "inari-yomeru-gpt-4.1"
             - name: AZURE_OPENAI_LLM_DEPLOYMENT_NAME
-              value: "inari-yomeru-gpt-4o"
+              value: "inari-yomeru-gpt-4.1"
             - name: AZURE_OPENAI_EMBEDDING_MODEL
               value: "text-embedding-ada-002"
             - name: AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME
@@ -121,6 +121,10 @@ spec:
               value: "synthetic_data"
             - name: LANCEDB_EMBEDDING_MODEL
               value: "inari-yomeru-embedding"
+            - name: TOOLKIT_CACHE_ENABLED
+              value: "False"
+            - name: TOOLKIT_CACHE_TTL
+              value: "0"
             - name: AWS_REGION_NAME
               valueFrom:
                 secretKeyRef:
@@ -179,7 +183,7 @@ spec:
             - name: POSTGRES_USER
               value: "data_app"
             - name: POSTGRES_SCHEMA
-              value: "redray"
+              value: "demo"
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -195,13 +199,13 @@ spec:
             - name: AZURE_OPENAI_ENDPOINT
               value: "https://inari-yomeru.openai.azure.com/"
             - name: AZURE_OPENAI_API_VERSION
-              value: "2023-03-15-preview"
+              value: "2024-12-01-preview"
             - name: AZURE_OPENAI_LLM_MODEL
-              value: "gpt-4o"
+              value: "gpt-4.1"
             - name: AZURE_OPENAI_LLM_TESTING_DEPLOYMENT_NAME
-              value: "inari-yomeru-gpt-4o"
+              value: "inari-yomeru-gpt-4.1"
             - name: AZURE_OPENAI_LLM_DEPLOYMENT_NAME
-              value: "inari-yomeru-gpt-4o"
+              value: "inari-yomeru-gpt-4.1"
             - name: AZURE_OPENAI_EMBEDDING_MODEL
               value: "text-embedding-ada-002"
             - name: AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME
@@ -235,6 +239,10 @@ spec:
               value: "synthetic_data"
             - name: LANCEDB_EMBEDDING_MODEL
               value: "inari-yomeru-embedding"
+            - name: TOOLKIT_CACHE_ENABLED
+              value: "False"
+            - name: TOOLKIT_CACHE_TTL
+              value: "0"
             - name: AWS_REGION_NAME
               valueFrom:
                 secretKeyRef:

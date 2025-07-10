@@ -14,8 +14,8 @@ cbot-build:
 		.
 
 minikube-start:
-	#minikube start --cpus=3 --memory=8192
-	minikube start
+	minikube start --cpus=3 --memory=8192
+	#minikube start
 # GCloud auth
 gcloud-auth:
 	gcloud auth application-default login
@@ -74,7 +74,7 @@ ray-up:
 	ray start --head
 
 ray-serve-deploy:
-	python app/local_deployment.py
+	python local_deployment.py
 
 ray-serve-status:
 	serve status
@@ -98,7 +98,7 @@ postgres-shell:
 psql-restore:
 	kubectl port-forward svc/postgres-postgresql 5432 --namespace cbot & \
 	sleep 5 && \
-	psql postgresql://data_app:securepassword@localhost:5432/datadb < ./postgres/01_redraytest_dump.sql
+	psql postgresql://data_app:securepassword@localhost:5432/datadb < ./postgres/01_demokitsune_demo_30062025.sql
 	psql postgresql://data_app:securepassword@localhost:5432/datadb < ./postgres/02_function_total_gross_premium.sql
 	psql postgresql://data_app:securepassword@localhost:5432/datadb < ./postgres/03_function_get_last_endorsements_id.sql
 	psql postgresql://data_app:securepassword@localhost:5432/datadb < ./postgres/04_function_get_premiums.sql
