@@ -71,6 +71,15 @@ spec:
                 secretKeyRef:
                   name: chatbot
                   key: postgres-password
+            - name: MONGODB_HOST
+              value: "localhost:27017/admin"
+            - name: MONGODB_USERNAME
+              value: "user"
+            - name: MONGODB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: chatbot
+                  key: mongodb-password
             - name: AZURE_OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
@@ -189,6 +198,15 @@ spec:
                 secretKeyRef:
                   name: chatbot
                   key: postgres-password
+            - name: MONGODB_HOST
+              value: "localhost:27017/admin"
+            - name: MONGODB_USERNAME
+              value: "user"
+            - name: MONGODB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: chatbot
+                  key: mongodb-password
             - name: AZURE_OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
