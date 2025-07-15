@@ -21,7 +21,10 @@ class ChatAgentRepository:
     def get_last_session_id(self, user_id: str) -> str | None:
         session = self.get_last_session(user_id=user_id)
 
-        return session["_id"] if session else None
+        if session and session.get("_id"):
+            return str(session["_id"])
+
+        return None
 
     def get_last_session(self, user_id: str) -> dict | None:
         collection = self.db[user_id]
