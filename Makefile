@@ -11,6 +11,10 @@ echo-version:
 gcloud-auth:
 	gcloud auth application-default login
 
+# Harbor
+build:
+	docker buildx build -t $(cbot_server_image_name) .
+
 # Local usage
 up:
 	docker compose up -d --build --detach --remove-orphans
@@ -41,3 +45,6 @@ psql-restore:
 export-dependencies:
 	uv export --format requirements-txt --no-dev --output-file requirements.txt --prerelease=allow
 	uv export --format requirements.txt --output-file requirements-dev.txt --prerelease=allow
+
+update-version:
+	sh update_version.sh $(version)
