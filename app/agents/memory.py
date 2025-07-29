@@ -1,5 +1,6 @@
 from agno.storage.mongodb import MongoDbStorage
-from config.settings import MongoDBConfig
+
+from app.config.settings import MongoDBConfig
 
 
 def get_storage_db(user_id: str) -> MongoDbStorage:

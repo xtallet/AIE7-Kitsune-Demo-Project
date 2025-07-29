@@ -1,10 +1,12 @@
+import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Type
 
-from config.settings import MongoDBConfig
 from dotenv import load_dotenv
 from pymongo import DESCENDING, MongoClient
+
+from app.config.settings import MongoDBConfig
 
 load_dotenv()
 
@@ -14,6 +16,7 @@ class ChatAgentRepository:
         config = MongoDBConfig()
         self.client = MongoClient(config.connection_string)
         self.db = self.client.chat_storage_db
+        self.logger = logging.getLogger(self.__class__.__name__)
 
     def create_or_get_last_session(self, user_id: str) -> str:
         return self.get_last_session_id(user_id=user_id) or str(uuid.uuid4())
@@ -48,6 +51,15 @@ class ChatAgentRepository:
         result = collection.insert_one(session_data)
 
         return str(result.inserted_id)
+
+    async def ping(self) -> bool:
+        try:
+            # The ping command checks the connection to the MongoDB server
+            self.client.admin.command("ping")
+            return True
+        except Exception as e:
+            self.logger.exception("MongoDB connectivity test failed", e)
+            raise RuntimeError(f"MongoDB DB connectivity test failed: {str(e)}")
 
     def __enter__(self) -> "ChatAgentRepository":
         return self

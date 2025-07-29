@@ -15,7 +15,7 @@ services:
 
   postgres:
     image: postgres:16
-    container_name: postgres_agente
+    container_name: postgres
     environment:
       POSTGRES_USER: data_app
       POSTGRES_PASSWORD: data12345 # pragma: allowlist secret
@@ -23,6 +23,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
       - ./postgres/01_demokitsune_demo_30062025.sql:/docker-entrypoint-initdb.d/01_demokitsune_demo_30062025.sql
       - ./postgres/02_function_total_gross_premium.sql:/docker-entrypoint-initdb.d/02_function_total_gross_premium.sql
       - ./postgres/03_function_get_last_endorsements_id.sql:/docker-entrypoint-initdb.d/03_function_get_last_endorsements_id.sql
@@ -60,11 +61,36 @@ services:
     depends_on:
       - mongodb
 
+  chatbot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - GUARDRAILS_HUB_TOKEN=${GUARDRAILS_HUB_TOKEN:-}
+    container_name: chatbot_service
+    restart: always
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/server_app/application_default_credentials.json
+    volumes:
+      - lancedb_data:/server_app/lancedb
+      - ${GCP_CREDENTIALS}:/server_app/application_default_credentials.json
+    networks:
+      - chatbot_network
+    depends_on:
+      - redis
+      - postgres
+      - mongodb
+
 volumes:
   redis:
     driver: local
-
   mongodb_data:
+    driver: local
+  lancedb_data:
     driver: local
 
 networks:

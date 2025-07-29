@@ -14,7 +14,6 @@ wheels/
 .env
 .python-version
 scripts/synthetic_data.lance
-postgres/
 .vscode
 tmp
 

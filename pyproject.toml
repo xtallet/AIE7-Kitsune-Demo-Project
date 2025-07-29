@@ -4,9 +4,6 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11.5,<3.13"
-#packages = [
-#    { include = "app", from = "." }
-#]
 dependencies = [
     "agno>=1.4.5",
     "dotenv>=0.9.9",
@@ -18,7 +15,6 @@ dependencies = [
     "python-dotenv>=1.1.0",
     "redis>=6.0.0",
     "requests>=2.32.3",
-    "ray[serve]==2.32.0",
     "transformers[torch]>=4.52.3",
     "pydantic>=2.11.4",
     "psycopg-binary>=3.2.9",
@@ -29,6 +25,8 @@ dependencies = [
     "numpy==1.26.4",
     "scipy==1.13.0",
     "pymongo>=4.13.2",
+    "fastapi>=0.116.1",
+    "uvicorn>=0.35.0",
 ]
 
 [dependency-groups]

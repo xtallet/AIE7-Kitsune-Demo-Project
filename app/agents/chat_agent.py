@@ -1,12 +1,12 @@
 import logging
 from typing import Optional
 
-from agents.memory import get_storage_db
 from agno.agent import Agent
 from agno.models.azure import AzureOpenAI
 from agno.run.response import RunResponse
 
 from app.agents.agent_port import AgentInterface
+from app.agents.memory import get_storage_db
 from app.config.settings import AzureOpenAIConfig
 from app.toolkits.sql_agent_toolkit import sql_agent_toolkit
 
@@ -18,7 +18,9 @@ class ChatbotAgent(AgentInterface):
         self.azureOpenAiconfig = AzureOpenAIConfig()
         self.sql_agent_toolkit = sql_agent_toolkit
 
-    def _init_agent(self, user_id: Optional[str], session_id: Optional[str]) -> None:
+    def _init_agent(
+        self, user_id: Optional[str] = None, session_id: Optional[str] = None
+    ) -> None:
         model = AzureOpenAI(self.azureOpenAiconfig.AZURE_OPENAI_LLM_DEPLOYMENT_NAME)
 
         self.agent = Agent(
@@ -27,7 +29,7 @@ class ChatbotAgent(AgentInterface):
             user_id=user_id,
             enable_agentic_memory=True,
             enable_user_memories=True,
-            storage=get_storage_db(user_id=user_id),
+            storage=get_storage_db(user_id=user_id) if user_id is not None else None,
             add_history_to_messages=True,
             description=(
                 "You are an expert database assistant."

@@ -1,11 +1,10 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from typing import Optional, Tuple
+from typing import Any, AsyncGenerator, Dict, Optional, Tuple
 
 from fastapi import FastAPI
 from pydantic import BaseModel, field_validator
-from ray import serve
 
 from app.adapters.out.adapter_factory import (
     build_cache_adapter,
@@ -14,6 +13,8 @@ from app.adapters.out.adapter_factory import (
 )
 from app.agents.chat_agent import ChatbotAgent
 from app.application.chatbot import KitsuneChatbot
+from app.repositories.chat_agent_repository import ChatAgentRepository
+from app.toolkits.postgres_toolkit import _get_postgres_tools
 
 
 class ChatRequest(BaseModel):
@@ -29,42 +30,60 @@ class ChatRequest(BaseModel):
 
 
 @asynccontextmanager
-async def lifespan(fastapi_app: FastAPI):
-    logger = logging.getLogger("ray.serve")
+async def lifespan(fastapi_app: FastAPI) -> AsyncGenerator[None, None]:
+    logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     service_errors = []
 
     # Test Redis cache connectivity
+    logger.info("Testing Redis cache connectivity...")
     cache_adapter = build_cache_adapter()
     if not await cache_adapter.ping():
         service_errors.append("Redis cache connectivity test failed.")
 
     # Testing lancedb
+    logger.info("Testing LanceDB connectivity...")
     lancedb_adapter = await build_knowledge_base_adapter()
     if not await lancedb_adapter.ping():
         service_errors.append("Knowledge DB connection is not open.")
 
+    # Test MongoDB connectivity
+    logger.info("Testing MongoDB connectivity...")
+    chat_agent_repo = ChatAgentRepository()
+    if not await chat_agent_repo.ping():
+        service_errors.append("MongoDB connectivity test failed.")
+
+    logger.info("Testing Postgres connectivity...")
+    tool = _get_postgres_tools()
+    result = tool.run_query(
+        "SELECT COUNT(cp.policy_reference) AS total_policies FROM get_premiums() cp;"
+    )
+    if not result:
+        service_errors.append("Postgres connectivity test failed.")
+    logger.info("Postgres connectivity test passed. Total policies: %s", result)
+
     # Test Guardrails connectivity
+    logger.info("Testing Guardrails connectivity...")
     guardrail_adapter = build_guardrail_adapter()
     if not await guardrail_adapter.ping():
         service_errors.append("Guardrails service connectivity test failed.")
 
     if service_errors:
         logger.error("\n".join(service_errors))
+        raise RuntimeError("Checks failed. Please check the logs for details.")
     else:
         yield
 
 
-fastapi_app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan)
 
 
-@serve.deployment
 class ChatbotService:
     def __init__(self):
         self.agent = None
         self._initialized = False
         self._lock = asyncio.Lock()
-        self.logger = logging.getLogger("ray.serve")
+        self.logger = logging.getLogger("fastapi")
         self.logger.setLevel(logging.INFO)
 
     async def _async_init(self):
@@ -88,18 +107,12 @@ class ChatbotService:
         return await self.agent.answer(question, user_id, session_id)
 
 
-@serve.deployment
-@serve.ingress(fastapi_app)
-class ChatbotAPIIngress:
-    def __init__(self, chatbot_handle):
-        self.chatbot_handle = chatbot_handle
-
-    @fastapi_app.post("/chat")
-    async def chat(self, request: ChatRequest):
-        response, session_id = await self.chatbot_handle.answer.remote(
-            request.question, request.user_id, request.session_id
-        )
-        return {"answer": response, "session_id": session_id}
+chatbot_service = ChatbotService()
 
 
-entrypoint = ChatbotAPIIngress.bind(ChatbotService.bind())  # type: ignore[attr-defined]
+@app.post("/chat")
+async def chat(request: ChatRequest) -> Dict[str, Any]:
+    response, session_id = await chatbot_service.answer(
+        request.question, request.user_id, request.session_id
+    )
+    return {"response": response, "session_id": session_id}

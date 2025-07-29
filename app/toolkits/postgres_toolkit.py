@@ -11,6 +11,18 @@ postgres_logger.setLevel(logging.INFO)
 toolkit_cache_config = ToolkitCacheConfig()
 
 
+def _get_postgres_tools() -> PostgresTools:
+    config = KitsuneDBConfig()
+    return PostgresTools(
+        host=config.POSTGRES_HOST,
+        port=config.POSTGRES_PORT,
+        user=config.POSTGRES_USER,
+        password=config.POSTGRES_PASSWORD,
+        db_name=config.POSTGRES_DB,
+        table_schema=config.POSTGRES_SCHEMA,
+    )
+
+
 @tool(
     name="postgres_toolkit",
     description="Run a query against the PostgreSQL database",
@@ -21,17 +33,10 @@ toolkit_cache_config = ToolkitCacheConfig()
 )
 def postgres_toolkit(query: str):
     try:
-        config = KitsuneDBConfig()
         postgres_logger.info(f"Running query: {query}")
-
-        return PostgresTools(
-            host=config.POSTGRES_HOST,
-            port=config.POSTGRES_PORT,
-            user=config.POSTGRES_USER,
-            password=config.POSTGRES_PASSWORD,
-            db_name=config.POSTGRES_DB,
-            table_schema=config.POSTGRES_SCHEMA,
-        ).run_query(query)
+        result = _get_postgres_tools().run_query(query)
+        postgres_logger.info(f"Query result: {result}")
+        return result
 
     except Exception as e:
         postgres_logger.exception("Failed to run query", e)
