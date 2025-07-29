@@ -11,12 +11,7 @@ WORKDIR /server_app
 
 COPY pyproject.toml uv.lock* requirements.txt ./
 
-RUN uv pip install --system --prerelease=allow -r requirements.txt
-
-ARG GUARDRAILS_HUB_TOKEN
-RUN yes | guardrails configure --token "$GUARDRAILS_HUB_TOKEN" && \
-    guardrails hub install hub://tryolabs/restricttotopic || \
-    (echo "ERROR INSTALLING VALIDATOR, logs:" && cat /root/.guardrails/logs/guardrails.log && exit 1)
+RUN uv pip install --system  -r requirements.txt
 
 RUN find /usr/local/lib/python3.12/site-packages -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true && \
     find /usr/local/lib/python3.12/site-packages -type f -name "*.pyc" -delete && \
@@ -28,7 +23,6 @@ FROM python:3.12-slim AS chatbot_server
 WORKDIR /server_app
 
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
-COPY --from=builder /usr/local/bin/guardrails /usr/local/bin/guardrails
 
 ENV PATH="/usr/local/bin:$PATH"
 

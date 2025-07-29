@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-@pytest.mark.usefixtures("setup_and_teardown")
+@pytest.mark.usefixtures("setup_and_teardown_mongo_db")
 class TestChatAgentRepository:
     def test_get_last_session_empty(self):
         result = self.repo.get_last_session(self.test_user_id)

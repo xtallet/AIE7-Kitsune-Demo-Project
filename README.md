@@ -23,12 +23,6 @@ uv sync --prerelease=allow
 
 Create the `.env` file with the required variables (use `.env.template` file as a template).
 
-Install Guardrail Restrict To Topic Validator (it will generate a token) and configure the token.
-```
-guardrails hub install hub://tryolabs/restricttotopic
-guardrails configure --token <YOUR_TOKEN>
-```
-
 Authenticate with Google Cloud.
 
 ```

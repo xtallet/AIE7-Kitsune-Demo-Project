@@ -10,11 +10,3 @@ class GuardrailInterface(ABC):
     @abstractmethod
     async def validate_question(self, user_question: str) -> bool:
         pass
-
-    @abstractmethod
-    async def ping(self) -> bool:
-        """Test the connectivity and functionality of the Guardrails service.
-
-        Returns True if the service is operational, otherwise raises an exception.
-        """
-        pass

@@ -1,176 +1,106 @@
-import random
+import json
 from unittest import mock
-from unittest.mock import ANY, AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import faker
 import pytest
-from guardrails import ValidationOutcome
-from guardrails.errors import ValidationError
-from pydantic import ValidationError as PydanticValidationError
 
-from app.adapters.out.guardrail_adapter import GuardrailAdapter
+from app.adapters.out.guardrail_adapter import GuardrailAdapter, has_topic_match
 
 
 class TestGuardrailAdapter:
     @pytest.fixture(autouse=True)
-    @mock.patch("logging.getLogger")
-    @mock.patch("app.adapters.out.guardrail_adapter.AsyncGuard")
-    @mock.patch("app.adapters.out.guardrail_adapter.AzureOpenAI")
-    def setup_method(self, mock_azure, mock_guard, mock_logger):
+    def setup_method(self):
         self.faker = faker.Faker()
-        self.allowed_topics = [self.faker.word() for _ in range(3)]
-        self.adapter = GuardrailAdapter(
-            model_name=self.faker.word(),
-            azure_deployment=self.faker.word(),
-            azure_endpoint=self.faker.url(),
-            api_version=self.faker.word(),
-            api_key=self.faker.password(),
-            allowed_topics=self.allowed_topics,
-        )
-        self.mock_logger = mock_logger
-        self.mock_client = mock_azure
-        self.mock_guard = mock_guard
+        self.allowed_topics = ["insurance policies", "claims", "coverage"]
+
+        self.mock_azure_client = MagicMock()
+        self.mock_completions = AsyncMock()
+        self.mock_azure_client.chat.completions.create = self.mock_completions
+
+        # Create the adapter with mock client
+        with mock.patch(
+            "app.adapters.out.guardrail_adapter.AzureOpenAI",
+            return_value=self.mock_azure_client,
+        ):
+            self.adapter = GuardrailAdapter(
+                model_name=self.faker.word(),
+                azure_deployment=self.faker.word(),
+                azure_endpoint=self.faker.url(),
+                api_version=self.faker.word(),
+                api_key=self.faker.password(),
+                allowed_topics=self.allowed_topics,
+            )
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
-        "validation_passed, validation_summaries",
+        "topics_in_response, expected_result",
         [
-            (True, []),
-            (False, [MagicMock(failure_reason="failure reason")]),
+            (["insurance policies"], True),
+            (["unrelated topic"], False),
+            ([], False),
         ],
     )
-    @mock.patch("app.adapters.out.guardrail_adapter.AsyncGuard")
-    @mock.patch("app.adapters.out.guardrail_adapter.AzureOpenAI")
-    async def test_validate_question(
-        self, _, mock_guard, validation_passed, validation_summaries
+    async def test_validate_question(self, topics_in_response, expected_result):
+        user_text = "What is an insurance policy?"
+
+        mock_function_call = MagicMock()
+        mock_function_call.arguments = json.dumps(
+            {"topics_present": topics_in_response}
+        )
+
+        mock_message = MagicMock()
+        mock_message.function_call = mock_function_call
+
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+
+        self.mock_completions.return_value = mock_response
+
+        result = await self.adapter.validate_question(user_text)
+
+        assert result is expected_result
+        self.mock_completions.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_validate_question_exception(self):
+        user_text = "What is an insurance policy?"
+        self.mock_completions.side_effect = Exception("API Error")
+
+        result = await self.adapter.validate_question(user_text)
+
+        assert result is False
+        self.mock_completions.assert_called_once()
+
+    @pytest.mark.parametrize(
+        "detected_topics, allowed_topics, expected_result",
+        [
+            # Exact matches
+            (["insurance policies"], ["insurance policies", "claims"], True),
+            (["claims"], ["insurance policies", "claims"], True),
+            # Singular/plural variations
+            (["policy"], ["policies", "claims"], True),
+            (["policies"], ["policy", "claims"], True),
+            (["claim"], ["claims", "coverage"], True),
+            # Stemmed variations
+            (["insuring"], ["insurance", "claims"], True),
+            (["insured"], ["insurance", "claims"], True),
+            (["claiming"], ["claim", "coverage"], True),
+            (["coverages"], ["coverage", "policies"], True),
+            # Compound words
+            (["life insurance"], ["insurance", "claims"], True),
+            (["auto policy"], ["policy", "coverage"], True),
+            # No matches
+            (["banking"], ["insurance", "claims", "coverage"], False),
+            (["loans"], ["policy", "claims", "coverage"], False),
+            ([], ["policy", "claims"], False),
+        ],
+    )
+    def test_has_topic_match(
+        self, monkeypatch, detected_topics, allowed_topics, expected_result
     ):
-        user_text = self.faker.word()
-        allowed_topics = [self.faker.word() for _ in range(3)]
-
-        # Mocks needed to create before instantiating GuardrailAdapter, otherwise it will use the real AsyncGuard
-        validation_result = mock.Mock(
-            validation_passed=validation_passed,
-            validation_summaries=validation_summaries,
-        )
-        mock_guard_instance = MagicMock()
-        mock_guard_instance.use.return_value = mock_guard_instance
-        mock_guard_instance.validate = AsyncMock(return_value=validation_result)
-        mock_guard.return_value = mock_guard_instance
-
-        adapter = GuardrailAdapter(
-            model_name=self.faker.word(),
-            azure_deployment=self.faker.word(),
-            azure_endpoint=self.faker.url(),
-            api_version=self.faker.word(),
-            api_key=self.faker.password(),
-            allowed_topics=allowed_topics,
-        )
-
-        result = await adapter.validate_question(user_text)
-
-        assert result is validation_passed
-
-    @pytest.mark.asyncio
-    @mock.patch("app.adapters.out.guardrail_adapter.AsyncGuard")
-    @mock.patch("app.adapters.out.guardrail_adapter.AzureOpenAI")
-    async def test_validate_question_raises_exception(self, _, mock_guard):
-        user_text = self.faker.word()
-        allowed_topics = [self.faker.word() for _ in range(3)]
-
-        # Mocks needed to create before instantiating GuardrailAdapter, otherwise it will use the real AsyncGuard
-        mock_guard_instance = MagicMock()
-        mock_guard_instance.use.return_value = mock_guard_instance
-        mock_guard_instance.validate.side_effect = ValidationError("Validation failed")
-        mock_guard.return_value = mock_guard_instance
-
-        adapter = GuardrailAdapter(
-            model_name=self.faker.word(),
-            azure_deployment=self.faker.word(),
-            azure_endpoint=self.faker.url(),
-            api_version=self.faker.word(),
-            api_key=self.faker.password(),
-            allowed_topics=allowed_topics,
-        )
-
-        result = await adapter.validate_question(user_text)
-
-        assert result is False
-
-    def test_azure_llm_callable_same_topics(self):
-        user_text = self.faker.sentence()
-
-        with mock.patch(
-            "pydantic.main.BaseModel.model_validate_json",
-            return_value=MagicMock(topics_present=self.allowed_topics),
-        ):
-            result = self.adapter._azure_llm_callable(user_text, self.allowed_topics)
-
-        assert isinstance(result, ValidationOutcome)
-        assert result.raw_llm_output == user_text
-        assert result.validated_output == self.allowed_topics[0]
-        assert result.validation_passed is True
-        assert result.validation_summaries == []
-
-    def test_azure_llm_callable_different_topics(self):
-        user_text = self.faker.sentence()
-        topics = [self.faker.word() for _ in range(3)]
-
-        with mock.patch(
-            "pydantic.main.BaseModel.model_validate_json",
-            return_value=MagicMock(topics_present=topics),
-        ):
-            result = self.adapter._azure_llm_callable(user_text, self.allowed_topics)
-
-        assert isinstance(result, ValidationOutcome)
-        assert result.raw_llm_output == user_text
-        assert result.validated_output == ""
-        assert result.validation_passed is False
-        assert result.validation_summaries == []
-
-    def test_azure_llm_callable_exception_raised(self):
-        user_text = self.faker.sentence()
-        exception = random.choices(
-            [KeyError(), PydanticValidationError("Validation error", [])],
-        )
-
-        with mock.patch(
-            "pydantic.main.BaseModel.model_validate_json", side_effect=exception
-        ):
-            result = self.adapter._azure_llm_callable(user_text, self.allowed_topics)
-
-        assert isinstance(result, ValidationOutcome)
-        assert result.raw_llm_output == user_text
-        assert result.validated_output == ""
-        assert result.validation_passed is False
-        assert result.validation_summaries == []
-        self.mock_logger.return_value.exception.assert_called_once_with(
-            "Pydantic parsing failed", ANY
-        )
-
-    @pytest.mark.asyncio
-    async def test_ping_returns_True(self):
-        with mock.patch.object(
-            self.adapter, "validate_question", return_value=self.faker.word()
-        ):
-            result = await self.adapter.ping()
-
-        assert result is True
-
-    @pytest.mark.asyncio
-    async def test_ping_returns_False(self):
-        with mock.patch.object(self.adapter, "validate_question", return_value=None):
-            result = await self.adapter.ping()
-
-        assert result is False
-
-    @pytest.mark.asyncio
-    async def test_ping_raises_exception(self):
-        with (
-            mock.patch.object(self.adapter, "validate_question", side_effect=Exception),
-            pytest.raises(RuntimeError, match="Guardrails service ping failed: "),
-        ):
-            await self.adapter.ping()
-
-        self.mock_logger.return_value.exception.assert_any_call(
-            "Guardrails service ping failed", ANY
-        )
+        result = has_topic_match(detected_topics, allowed_topics)
+        assert result == expected_result

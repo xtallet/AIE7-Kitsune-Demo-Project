@@ -62,15 +62,9 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncGenerator[None, None]:
         service_errors.append("Postgres connectivity test failed.")
     logger.info("Postgres connectivity test passed. Total policies: %s", result)
 
-    # Test Guardrails connectivity
-    logger.info("Testing Guardrails connectivity...")
-    guardrail_adapter = build_guardrail_adapter()
-    if not await guardrail_adapter.ping():
-        service_errors.append("Guardrails service connectivity test failed.")
-
     if service_errors:
         logger.error("\n".join(service_errors))
-        raise RuntimeError("Checks failed. Please check the logs for details.")
+        raise RuntimeError(f"Checks failed: {'; '.join(service_errors)}")
     else:
         yield
 

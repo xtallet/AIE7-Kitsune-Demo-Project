@@ -65,8 +65,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        - GUARDRAILS_HUB_TOKEN=${GUARDRAILS_HUB_TOKEN:-}
     container_name: chatbot_service
     restart: always
     ports:

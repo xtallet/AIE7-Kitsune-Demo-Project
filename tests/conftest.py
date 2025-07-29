@@ -4,8 +4,8 @@ import pytest
 from repositories.chat_agent_repository import ChatAgentRepository
 
 
-@pytest.fixture(autouse=True)
-def setup_and_teardown(request):
+@pytest.fixture()
+def setup_and_teardown_mongo_db(request):
     request.cls.repo = ChatAgentRepository()
     request.cls.test_user_id = f"test_user_{int(time.time())}"
 

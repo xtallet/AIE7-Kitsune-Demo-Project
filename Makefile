@@ -39,5 +39,5 @@ psql-restore:
 
 # Requirements and Dependencies
 export-dependencies:
-	uv export --format requirements-txt --no-dev --locked --output-file requirements.txt --prerelease=allow
-	uv export --format requirements.txt --locked --output-file requirements-dev.txt --prerelease=allow
+	uv export --format requirements-txt --no-dev --output-file requirements.txt --prerelease=allow
+	uv export --format requirements.txt --output-file requirements-dev.txt --prerelease=allow
