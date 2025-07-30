@@ -1,3 +1,4 @@
+import os
 import urllib.parse
 from functools import cached_property
 from typing import Any, List
@@ -53,6 +54,13 @@ class KitsuneDBConfig(BaseSettings):
     POSTGRES_DB: str
     POSTGRES_SCHEMA: str
 
+    @cached_property
+    def postgres_host(self) -> str:
+        """Return localhost as the host when in test mode, otherwise the configured host."""
+        if bool(os.getenv("TEST_RUN", False)) is True:
+            return "localhost"
+        return self.POSTGRES_HOST
+
 
 class ToolkitCacheConfig(BaseSettings):
     TOOLKIT_CACHE_ENABLED: bool = True
@@ -79,5 +87,12 @@ class MongoDBConfig(BaseSettings):
     @cached_property
     def connection_string(self) -> str:
         connection_string = f"{self.MONGODB_PROTOCOL}://"
-        connection_string = f"{connection_string}{urllib.parse.quote_plus(self.MONGODB_USERNAME)}:{urllib.parse.quote_plus(self.MONGODB_PASSWORD)}@{self.MONGODB_HOST}"
+        connection_string = f"{connection_string}{urllib.parse.quote_plus(self.MONGODB_USERNAME)}:{urllib.parse.quote_plus(self.MONGODB_PASSWORD)}@{self.mongodb_host}"
         return connection_string
+
+    @cached_property
+    def mongodb_host(self) -> str:
+        """Return localhost as the host when in test mode, otherwise the configured host."""
+        if bool(os.getenv("TEST_RUN", False)) is True:
+            return "localhost"
+        return self.MONGODB_HOST

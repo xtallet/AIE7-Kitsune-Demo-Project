@@ -14,7 +14,7 @@ toolkit_cache_config = ToolkitCacheConfig()
 def _get_postgres_tools() -> PostgresTools:
     config = KitsuneDBConfig()
     return PostgresTools(
-        host=config.POSTGRES_HOST,
+        host=config.postgres_host,
         port=config.POSTGRES_PORT,
         user=config.POSTGRES_USER,
         password=config.POSTGRES_PASSWORD,

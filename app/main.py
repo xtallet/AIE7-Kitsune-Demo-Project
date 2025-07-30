@@ -1,9 +1,9 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, Dict, Optional, Tuple
+from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel, field_validator
 
 from app.adapters.out.adapter_factory import (
@@ -29,8 +29,7 @@ class ChatRequest(BaseModel):
         return value
 
 
-@asynccontextmanager
-async def lifespan(fastapi_app: FastAPI) -> AsyncGenerator[None, None]:
+async def _lifespan() -> List[str]:
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     service_errors = []
@@ -61,6 +60,16 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncGenerator[None, None]:
     if not result:
         service_errors.append("Postgres connectivity test failed.")
     logger.info("Postgres connectivity test passed. Total policies: %s", result)
+
+    return service_errors
+
+
+@asynccontextmanager
+async def lifespan(fastapi_app: FastAPI) -> AsyncGenerator[None, None]:
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+
+    service_errors = await _lifespan()
 
     if service_errors:
         logger.error("\n".join(service_errors))
@@ -110,3 +119,21 @@ async def chat(request: ChatRequest) -> Dict[str, Any]:
         request.question, request.user_id, request.session_id
     )
     return {"response": response, "session_id": session_id}
+
+
+@app.get("/readiness")
+async def readiness():
+    service_errors = await _lifespan()
+
+    if service_errors:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"status": "not ready", "errors": service_errors},
+        )
+
+    return {"status": "ready"}
+
+
+@app.get("/liveness")
+async def liveness():
+    return {"status": "alive"}

@@ -9,7 +9,7 @@ class PostgresToolkitFactory:
 
     def get_db_tools(self) -> PostgresTools:
         return PostgresTools(
-            host=self.kitsune_db_config.POSTGRES_HOST,
+            host=self.kitsune_db_config.postgres_host,
             port=self.kitsune_db_config.POSTGRES_PORT,
             user=self.kitsune_db_config.POSTGRES_USER,
             password=self.kitsune_db_config.POSTGRES_PASSWORD,
