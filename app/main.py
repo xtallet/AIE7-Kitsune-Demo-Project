@@ -3,18 +3,22 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
 
+import aiohttp
+from config.settings import LangSmithConfig
 from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel, field_validator
 
-from app.adapters.out.adapter_factory import (
+from app.adapters.adapter_factory import (
     build_cache_adapter,
-    build_guardrail_adapter,
     build_knowledge_base_adapter,
 )
-from app.agents.chat_agent import ChatbotAgent
-from app.application.chatbot import KitsuneChatbot
+from app.application.graph import compile_graph
+from app.domain.domain import CbotState
 from app.repositories.chat_agent_repository import ChatAgentRepository
 from app.toolkits.postgres_toolkit import _get_postgres_tools
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 
 class ChatRequest(BaseModel):
@@ -40,7 +44,7 @@ async def _lifespan() -> List[str]:
     if not await cache_adapter.ping():
         service_errors.append("Redis cache connectivity test failed.")
 
-    # Testing lancedb
+    # Test LanceDB connectivity
     logger.info("Testing LanceDB connectivity...")
     lancedb_adapter = await build_knowledge_base_adapter()
     if not await lancedb_adapter.ping():
@@ -52,6 +56,7 @@ async def _lifespan() -> List[str]:
     if not await chat_agent_repo.ping():
         service_errors.append("MongoDB connectivity test failed.")
 
+    # Test Postgres connectivity
     logger.info("Testing Postgres connectivity...")
     tool = _get_postgres_tools()
     result = tool.run_query(
@@ -60,6 +65,26 @@ async def _lifespan() -> List[str]:
     if not result:
         service_errors.append("Postgres connectivity test failed.")
     logger.info("Postgres connectivity test passed. Total policies: %s", result)
+
+    # Test LangSmith connectivity
+    logger.info("Testing LangSmith connectivity...")
+    try:
+        langsmith_config = LangSmithConfig()
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                f"{langsmith_config.LANGSMITH_ENDPOINT}/api/v1/info",
+                headers={
+                    "Authorization": f"Bearer {langsmith_config.LANGSMITH_API_KEY}"
+                },
+            ) as response:
+                if response.status >= 400:
+                    raise Exception(f"HTTP error {response.status}")
+                await response.text()  # Ensure we read the response
+        logger.info("LangSmith connectivity test passed.")
+    except Exception as e:
+        error_msg = f"LangSmith connectivity test failed: {str(e)}"
+        service_errors.append(error_msg)
+        logger.error(error_msg)
 
     return service_errors
 
@@ -93,21 +118,18 @@ class ChatbotService:
         if not self._initialized:
             async with self._lock:
                 if not self._initialized:  # Double-check inside the lock
-                    self.logger.info("Initializing the chatbot agent...")
-                    self.agent = KitsuneChatbot(
-                        cache=build_cache_adapter(),
-                        guardrail=build_guardrail_adapter(),
-                        logger=self.logger,
-                        chatbot_agent=ChatbotAgent(),
-                    )
+                    logger.info("Compiling Graph...")
+                    self.compiled_graph = await compile_graph()
                     self._initialized = True
-                    self.logger.info("Chatbot agent initialized successfully.")
+                    logger.info("Graph Compiled.")
 
     async def answer(
         self, question: str, user_id: str, session_id: Optional[str] = None
     ) -> Tuple[str, str]:
         await self._async_init()
-        return await self.agent.answer(question, user_id, session_id)
+        state = CbotState(question=question, user_id=user_id, session_id=session_id)
+        result = await self.compiled_graph.ainvoke(state)
+        return result["answer"], result["session_id"]
 
 
 chatbot_service = ChatbotService()

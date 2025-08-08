@@ -4,10 +4,11 @@ from typing import Any
 
 import redis.asyncio as redis
 
-from app.domain.ports.cache_port import Cache
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 
-class NoOpCacheAdapter(Cache):
+class NoOpCacheAdapter:
     async def save_to_cache(self, key: str, data: Any) -> None:
         pass
 
@@ -18,7 +19,7 @@ class NoOpCacheAdapter(Cache):
         return True
 
 
-class CacheRedisAdapter(Cache):
+class CacheRedisAdapter:
     def __init__(
         self,
         host: str,
@@ -35,31 +36,32 @@ class CacheRedisAdapter(Cache):
             db=db,
             encoding=encoding,
         )
-        self.logger = logging.getLogger(self.__class__.__name__)
 
     async def save_to_cache(self, key: str, data: Any) -> None:
         try:
             await self.client.set(key, json.dumps(data))
-            self.logger.debug(f"Data saved to cache {data}")
+            logger.info(f"Data saved to cache {data}")
         except Exception as e:
-            self.logger.exception(f"Failed to save data to cache for key: {key}", e)
+            logger.exception(f"Failed to save data to cache for key: {key}", exc_info=e)
             raise
 
     async def get_from_cache(self, key: str) -> Any:
         try:
             value = await self.client.get(key)
             if not value:
-                self.logger.debug(f"Cache miss for key: {key}")
+                logger.info(f"Cache miss for key: {key}")
                 return None
             data = json.loads(value)
-            self.logger.debug(f"Data retrieved from cache: {data}")
+            logger.info(f"Data retrieved from cache: {data}")
             return data
         except json.JSONDecodeError as e:
-            self.logger.exception(f"Failed to decode JSON from cache for key: {key}", e)
+            logger.exception(
+                f"Failed to decode JSON from cache for key: {key}", exc_info=e
+            )
             return None
         except Exception as e:
-            self.logger.exception(
-                f"Failed to retrieve data from cache for key: {key}", e
+            logger.exception(
+                f"Failed to retrieve data from cache for key: {key}", exc_info=e
             )
             raise
 
@@ -70,8 +72,8 @@ class CacheRedisAdapter(Cache):
         """
         try:
             response = await self.client.ping()
-            self.logger.debug("Redis cache ping successful.")
+            logger.info("Redis cache ping successful.")
             return response
         except Exception as e:
-            self.logger.exception("Redis cache connectivity test failed", e)
+            logger.exception("Redis cache connectivity test failed", exc_info=e)
             raise RuntimeError(f"Redis cache connectivity test failed: {str(e)}")

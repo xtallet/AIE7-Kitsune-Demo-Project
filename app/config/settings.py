@@ -7,6 +7,16 @@ from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 
+class LangSmithConfig(BaseSettings):
+    LANGSMITH_PROJECT: str
+    LANGSMITH_API_KEY: str
+    LANGSMITH_ENDPOINT: str
+    LANGSMITH_TRACING: bool = True
+
+    class Config:
+        env_file = ".env"
+
+
 class AzureOpenAIConfig(BaseSettings):
     AZURE_OPENAI_API_KEY: str
     AZURE_OPENAI_API_ENDPOINT: str

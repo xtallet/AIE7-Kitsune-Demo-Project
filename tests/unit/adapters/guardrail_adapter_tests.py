@@ -1,11 +1,10 @@
-import json
 from unittest import mock
 from unittest.mock import AsyncMock, MagicMock
 
 import faker
 import pytest
 
-from app.adapters.out.guardrail_adapter import GuardrailAdapter, has_topic_match
+from app.adapters.guardrail_adapter import GuardrailAdapter, has_topic_match
 
 
 class TestGuardrailAdapter:
@@ -20,7 +19,7 @@ class TestGuardrailAdapter:
 
         # Create the adapter with mock client
         with mock.patch(
-            "app.adapters.out.guardrail_adapter.AzureOpenAI",
+            "app.adapters.guardrail_adapter.AzureChatOpenAI",
             return_value=self.mock_azure_client,
         ):
             self.adapter = GuardrailAdapter(
@@ -28,10 +27,10 @@ class TestGuardrailAdapter:
                 azure_deployment=self.faker.word(),
                 azure_endpoint=self.faker.url(),
                 api_version=self.faker.word(),
-                api_key=self.faker.password(),
                 allowed_topics=self.allowed_topics,
             )
 
+    @pytest.mark.asyncio
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "topics_in_response, expected_result",
@@ -44,26 +43,16 @@ class TestGuardrailAdapter:
     async def test_validate_question(self, topics_in_response, expected_result):
         user_text = "What is an insurance policy?"
 
-        mock_function_call = MagicMock()
-        mock_function_call.arguments = json.dumps(
-            {"topics_present": topics_in_response}
-        )
-
-        mock_message = MagicMock()
-        mock_message.function_call = mock_function_call
-
-        mock_choice = MagicMock()
-        mock_choice.message = mock_message
-
         mock_response = MagicMock()
-        mock_response.choices = [mock_choice]
+        mock_response.content = ",".join(topics_in_response)
 
-        self.mock_completions.return_value = mock_response
+        self.mock_azure_client.ainvoke = AsyncMock(return_value=mock_response)
 
         result = await self.adapter.validate_question(user_text)
 
         assert result is expected_result
-        self.mock_completions.assert_called_once()
+
+        self.mock_azure_client.ainvoke.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_validate_question_exception(self):

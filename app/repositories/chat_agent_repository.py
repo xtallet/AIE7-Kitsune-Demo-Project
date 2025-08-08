@@ -58,7 +58,7 @@ class ChatAgentRepository:
             self.client.admin.command("ping")
             return True
         except Exception as e:
-            self.logger.exception("MongoDB connectivity test failed", e)
+            self.logger.exception("MongoDB connectivity test failed", exc_info=e)
             raise RuntimeError(f"MongoDB connectivity test failed: {str(e)}")
 
     def __enter__(self) -> "ChatAgentRepository":

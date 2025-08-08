@@ -2,13 +2,10 @@ import json
 import os
 import sys
 
-from dotenv import load_dotenv
-
-# from utils.embeddings import embed_text
-from lancedb.pydantic import LanceModel, Vector
-from openai import AzureOpenAI
-
 import lancedb
+from dotenv import load_dotenv
+from lancedb.pydantic import LanceModel, Vector
+from langchain_openai import AzureChatOpenAI
 
 env_vars = load_dotenv()
 
@@ -34,10 +31,10 @@ class SyntheticData(LanceModel):
 load_dotenv()
 
 # Initialize the OpenAI client with the API key
-client = AzureOpenAI(
-    api_key=os.environ["AZURE_OPENAI_API_KEY"],
+client = AzureChatOpenAI(
     api_version=os.environ["AZURE_OPENAI_API_VERSION"],
     azure_endpoint=os.environ["AZURE_OPENAI_API_ENDPOINT"],
+    azure_deployment=os.environ["AZURE_OPENAI_LLM_DEPLOYMENT_NAME"],
 )
 
 

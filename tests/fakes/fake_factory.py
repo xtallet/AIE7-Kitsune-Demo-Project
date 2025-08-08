@@ -1,7 +1,4 @@
-from app.domain.ports.cache_port import Cache
-
-
-class FakeCache(Cache):
+class FakeCache:
     def __init__(self):
         self.store = {}
 

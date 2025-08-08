@@ -1,5 +1,4 @@
 import pytest
-from agno.exceptions import StopAgentRun
 from dotenv import load_dotenv
 from repositories.chat_agent_repository import ChatAgentRepository
 
@@ -8,78 +7,52 @@ from app.agents.chat_agent import ChatbotAgent
 load_dotenv()
 
 
-def mock_sql_agent_toolkit():
-    raise StopAgentRun("test")
-
-
-@pytest.mark.skip(
-    "Skipping test for Azure OpenAI due to costs, execute manually when needed."
-)
+@pytest.mark.usefixtures("setup_and_teardown_mongo_db")
 class TestChatbotAgent:
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        self.ANY_ID = "123"
+        self.chat_agent = ChatbotAgent()
+
     @pytest.mark.asyncio
     async def test_agent_connection_and_response(self):
-        agent = ChatbotAgent()
-        session_id = "123"
-
-        result = await agent.run(
+        result, session_id = await self.chat_agent.run(
             user_question="How many policies do I have?",
-            user_id=self.test_user_id,
-            session_id=session_id,
+            user_id=self.ANY_ID,
+            session_id=self.ANY_ID,
+            context={"sql_result": "total_policies, 106"},
         )
 
         assert "106" in result
         assert "policies" in result
+        assert self.ANY_ID == session_id
 
     @pytest.mark.asyncio
     async def test_check_storage(self):
-        agent = ChatbotAgent()
-        user_question = "How many policies do I have?"
-        session_id = "123"
-
-        result = await agent.run(
-            user_question=user_question,
-            user_id=self.test_user_id,
-            session_id=session_id,
+        await self.chat_agent.run(
+            user_question="How many policies do I have?",
+            user_id=self.ANY_ID,
+            session_id=self.ANY_ID,
+            context={"sql_result": "total_policies, 106"},
         )
 
-        assert "106" in result
-        assert "policies" in result
-
-        agent_session_id = agent.agent.session_id
+        agent_session_id = self.chat_agent.agent.session_id
         assert agent_session_id is not None
 
         repo = ChatAgentRepository()
-        last_session = repo.get_last_session(self.test_user_id)
+        last_session = repo.get_last_session(self.ANY_ID)
         assert last_session is not None
-        assert last_session["session_id"] == session_id
-
-    @pytest.mark.asyncio
-    async def test_agent_connection_and_response_with_error(self):
-        agent = ChatbotAgent()
-        agent.sql_agent_toolkit = mock_sql_agent_toolkit
-        session_id = "123"
-
-        result = await agent.run(
-            user_question="How many policies do I have?",
-            user_id=self.test_user_id,
-            session_id=session_id,
-        )
-
-        assert (
-            result
-            == "I can't respond to that question at this moment, try again later."
-        )
+        assert last_session["session_id"] == self.ANY_ID
 
     @pytest.mark.asyncio
     async def test_insert_data_into_database(self):
-        agent = ChatbotAgent()
         user_question = "insert a new policy with the following data: policy_id: 123, policy_name: test, policy_description: test"
-        session_id = "123"
 
-        result = await agent.run(
+        result, _ = await self.chat_agent.run(
             user_question=user_question,
-            user_id=self.test_user_id,
-            session_id=session_id,
+            user_id=self.ANY_ID,
+            session_id=self.ANY_ID,
+            context={"sql_result": "total_policies, 106"},
         )
 
-        assert result == "I can't insert, update or delete data into the database."
+        assert result == "I can't perform any action."

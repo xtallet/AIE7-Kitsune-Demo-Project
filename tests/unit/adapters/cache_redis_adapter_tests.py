@@ -5,7 +5,7 @@ from unittest.mock import ANY, AsyncMock
 import faker
 import pytest
 
-from app.adapters.out.cache_redis_adapter import CacheRedisAdapter
+from app.adapters.cache_redis_adapter import CacheRedisAdapter
 
 
 class TestCacheRedisAdapter:
@@ -86,8 +86,8 @@ class TestCacheRedisAdapter:
 
         assert result is None
         mock_get.assert_called_once_with(self.key)
-        self.mock_logger.return_value.error.assert_any_call(
-            f"Failed to decode JSON from cache for key: {self.key}"
+        self.mock_logger.return_value.exception.assert_any_call(
+            f"Failed to decode JSON from cache for key: {self.key}", ANY
         )
 
     @pytest.mark.asyncio

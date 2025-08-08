@@ -1,14 +1,12 @@
 import logging
 
 from agno.exceptions import StopAgentRun
-from agno.tools import tool
 from agno.tools.postgres import PostgresTools
 
-from app.config.settings import KitsuneDBConfig, ToolkitCacheConfig
+from app.config.settings import KitsuneDBConfig
 
-postgres_logger = logging.getLogger("postgres_toolkit")
+postgres_logger = logging.getLogger()
 postgres_logger.setLevel(logging.INFO)
-toolkit_cache_config = ToolkitCacheConfig()
 
 
 def _get_postgres_tools() -> PostgresTools:
@@ -23,15 +21,7 @@ def _get_postgres_tools() -> PostgresTools:
     )
 
 
-@tool(
-    name="postgres_toolkit",
-    description="Run a query against the PostgreSQL database",
-    show_result=True,
-    cache_results=toolkit_cache_config.TOOLKIT_CACHE_ENABLED,
-    cache_ttl=toolkit_cache_config.TOOLKIT_CACHE_TTL,
-    cache_dir="/tmp/postgres_toolkit_cache",
-)
-def postgres_toolkit(query: str):
+def postgres_toolkit(query: str) -> str:
     try:
         postgres_logger.info(f"Running query: {query}")
         result = _get_postgres_tools().run_query(query)

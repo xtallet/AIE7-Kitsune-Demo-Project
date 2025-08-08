@@ -1,10 +1,11 @@
 import logging
 
-from openai import AsyncAzureOpenAI, Embedding
+from langchain_openai import AzureOpenAIEmbeddings
 
-from app.adapters.out.cache_redis_adapter import CacheRedisAdapter, NoOpCacheAdapter
-from app.adapters.out.guardrail_adapter import GuardrailAdapter
-from app.adapters.out.knowledge_lancedb_adapter import KnowledgeLanceDBAdapter
+from app.adapters.cache_redis_adapter import CacheRedisAdapter, NoOpCacheAdapter
+from app.adapters.guardrail_adapter import GuardrailAdapter
+from app.adapters.knowledge_lancedb_adapter import KnowledgeLanceDBAdapter
+from app.adapters.llm_adapter import LLMAdapter
 from app.config.settings import (
     AzureOpenAIConfig,
     GuardrailConfig,
@@ -13,7 +14,7 @@ from app.config.settings import (
 )
 
 
-def build_cache_adapter():
+def build_cache_adapter() -> CacheRedisAdapter | NoOpCacheAdapter:
     redis_config = RedisConfig()
 
     if not redis_config.REDIS_ENABLE_FLAG:
@@ -31,26 +32,22 @@ def build_cache_adapter():
     )
 
 
-def build_azure_openai_client() -> Embedding:
-    azure_config = AzureOpenAIConfig()
-    return AsyncAzureOpenAI(
-        api_key=azure_config.AZURE_OPENAI_API_KEY,
-        api_version=azure_config.AZURE_OPENAI_API_VERSION,
-        azure_endpoint=azure_config.AZURE_OPENAI_API_ENDPOINT,
-    )
-
-
-def build_knowledge_base_adapter():
+async def build_knowledge_base_adapter() -> KnowledgeLanceDBAdapter:
     lancedb_config = LanceDBConfig()
-    return KnowledgeLanceDBAdapter.create(
+    azure_config = AzureOpenAIConfig()
+    return await KnowledgeLanceDBAdapter.create(
         db_path=lancedb_config.LANCEDB_PATH,
         table_name=lancedb_config.LANCEDB_TABLE_NAME,
         embedding_model_name=lancedb_config.LANCEDB_EMBEDDING_MODEL,
-        embedding_client=build_azure_openai_client(),
+        embedding_client=AzureOpenAIEmbeddings(
+            azure_endpoint=azure_config.AZURE_OPENAI_API_ENDPOINT,
+            azure_deployment=azure_config.AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME,
+            openai_api_version=azure_config.AZURE_OPENAI_API_VERSION,
+        ),
     )
 
 
-def build_guardrail_adapter():
+def build_guardrail_adapter() -> GuardrailAdapter:
     guardrail_config = GuardrailConfig()
     azure_config = AzureOpenAIConfig()
     return GuardrailAdapter(
@@ -58,6 +55,15 @@ def build_guardrail_adapter():
         azure_deployment=azure_config.AZURE_OPENAI_LLM_DEPLOYMENT_NAME,
         azure_endpoint=azure_config.AZURE_OPENAI_API_ENDPOINT,
         api_version=azure_config.AZURE_OPENAI_API_VERSION,
-        api_key=azure_config.AZURE_OPENAI_API_KEY,
         allowed_topics=guardrail_config.ALLOWED_TOPICS,
+    )
+
+
+def build_llm_adapter() -> LLMAdapter:
+    azure_config = AzureOpenAIConfig()
+    return LLMAdapter(
+        model_name=azure_config.AZURE_OPENAI_LLM_MODEL,
+        azure_deployment=azure_config.AZURE_OPENAI_LLM_DEPLOYMENT_NAME,
+        azure_endpoint=azure_config.AZURE_OPENAI_API_ENDPOINT,
+        api_version=azure_config.AZURE_OPENAI_API_VERSION,
     )

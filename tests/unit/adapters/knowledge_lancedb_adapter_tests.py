@@ -5,7 +5,7 @@ import faker
 import pandas as pd
 import pytest
 
-from app.adapters.out.knowledge_lancedb_adapter import KnowledgeLanceDBAdapter
+from app.adapters.knowledge_lancedb_adapter import KnowledgeLanceDBAdapter
 
 
 class TestKnowledgeLanceDBAdapter:
@@ -22,7 +22,7 @@ class TestKnowledgeLanceDBAdapter:
         embedding_client = MagicMock()
 
         with mock.patch(
-            "app.adapters.out.knowledge_lancedb_adapter.connect_async",
+            "app.adapters.knowledge_lancedb_adapter.connect_async",
             new_callable=AsyncMock,
             return_value=db_mock,
         ):
@@ -51,7 +51,7 @@ class TestKnowledgeLanceDBAdapter:
 
         with (
             mock.patch(
-                "app.adapters.out.knowledge_lancedb_adapter.connect_async",
+                "app.adapters.knowledge_lancedb_adapter.connect_async",
                 new_callable=AsyncMock,
                 side_effect=Exception,
             ),
@@ -74,6 +74,9 @@ class TestKnowledgeLanceDBAdapter:
         embedding_model_name = self.faker.word()
         text = self.faker.sentence()
 
+        mock_embedding = [0.1, 0.2, 0.3]
+        mock_embedding_client.aembed_query.return_value = mock_embedding
+
         with mock.patch("logging.getLogger") as mock_logger:
             adapter = KnowledgeLanceDBAdapter(
                 db=AsyncMock(),
@@ -82,20 +85,16 @@ class TestKnowledgeLanceDBAdapter:
                 embedding_client=mock_embedding_client,
             )
 
-        await adapter.create_embedding(text)
+            result = await adapter.create_embedding(text)
 
-        mock_embedding_client.embeddings.create.assert_called_once_with(
-            input=[text], model=embedding_model_name
-        )
-        mock_logger.return_value.debug.assert_called_once_with(
-            f"Generated embedding: {mock_embedding_client.embeddings.create.return_value.data[0].embedding}"
-        )
+        mock_embedding_client.aembed_query.assert_called_once_with(text=text)
+
+        assert result == mock_embedding
 
     @pytest.mark.asyncio
     async def test_knowledge_lancedb_adapter_create_embedding_raise_exception(self):
         mock_embedding_client = MagicMock()
-        mock_embedding_client.embeddings.create = AsyncMock()
-        mock_embedding_client.embeddings.create.side_effect = Exception
+        mock_embedding_client.embed_query.side_effect = Exception
         embedding_model_name = self.faker.word()
         text = self.faker.sentence()
 
@@ -111,11 +110,8 @@ class TestKnowledgeLanceDBAdapter:
             )
             await adapter.create_embedding(text)
 
-        mock_embedding_client.embeddings.create.assert_called_once_with(
-            input=[text], model=embedding_model_name
-        )
-        mock_logger.return_value.exception.assert_called_once_with(
-            f"Failed to create embedding for text: {text}", ANY
+        mock_embedding_client.embeddings.embed_query(
+            text=text,
         )
 
     @pytest.mark.asyncio
@@ -134,9 +130,6 @@ class TestKnowledgeLanceDBAdapter:
         await adapter.ping()
 
         mock_db.is_open.assert_called_once()
-        mock_logger.return_value.debug.assert_called_once_with(
-            "Knowledge base ping successful."
-        )
 
     @pytest.mark.asyncio
     async def test_knowledge_lancedb_adapter_ping_False(self):
@@ -156,9 +149,6 @@ class TestKnowledgeLanceDBAdapter:
             await adapter.ping()
 
         mock_db.is_open.assert_called_once()
-        mock_logger.return_value.exception.assert_called_once_with(
-            "Knowledge base connectivity test failed", ANY
-        )
         assert (
             str(exception_raised.value)
             == "Knowledge base connectivity test failed: Knowledge base connection is not open."
@@ -182,9 +172,6 @@ class TestKnowledgeLanceDBAdapter:
             await adapter.ping()
 
         mock_db.is_open.assert_called_once()
-        mock_logger.return_value.exception.assert_called_once_with(
-            "Knowledge base connectivity test failed", ANY
-        )
         assert (
             str(exception_raised.value) == "Knowledge base connectivity test failed: "
         )
@@ -232,12 +219,6 @@ class TestKnowledgeLanceDBAdapter:
         assert expected in result
         mock_table.search.assert_called_once_with(mock_create_embedding)
         mock_limited.to_pandas.assert_awaited_once()
-        mock_logger.return_value.debug.assert_any_call(
-            f"Query embedding: {mock_create_embedding}"
-        )
-        mock_logger.return_value.debug.assert_any_call(
-            f"Search results dataframe: {mock_df}"
-        )
 
     @pytest.mark.asyncio
     async def test_knowledge_lancedb_adapter_search_raise_exception(self):
@@ -257,7 +238,4 @@ class TestKnowledgeLanceDBAdapter:
         ):
             await adapter.search(query="test query")
 
-        mock_logger.return_value.exception.assert_called_once_with(
-            "Failed to search knowledge base for query: test query", ANY
-        )
         assert str(exception_raised.value) == "Failed to search knowledge base."

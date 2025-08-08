@@ -19,6 +19,9 @@ build:
 up:
 	docker compose up -d --build --detach --remove-orphans
 
+up-infrastructure:
+	docker compose up -d --build --detach --remove-orphans redis postgres mongodb mongo-express
+
 down:
 	docker compose --profile "*" down --remove-orphans -t 5
 
@@ -36,10 +39,10 @@ postgres-shell:
 psql-restore:
 	kubectl port-forward svc/postgres-postgresql 5432 --namespace cbot & \
 	sleep 5 && \
-	psql postgresql://data_app:securepassword@localhost:5432/datadb < ./postgres/01_demokitsune_demo_30062025.sql
-	psql postgresql://data_app:securepassword@localhost:5432/datadb < ./postgres/02_function_total_gross_premium.sql
-	psql postgresql://data_app:securepassword@localhost:5432/datadb < ./postgres/03_function_get_last_endorsements_id.sql
-	psql postgresql://data_app:securepassword@localhost:5432/datadb < ./postgres/04_function_get_premiums.sql
+	psql postgresql://data_app:securepassword@localhost:5432/datadb < ./postgres/01_demokitsune_demo_30062025.sql # pragma: allowlist secret
+	psql postgresql://data_app:securepassword@localhost:5432/datadb < ./postgres/02_function_total_gross_premium.sql # pragma: allowlist secret
+	psql postgresql://data_app:securepassword@localhost:5432/datadb < ./postgres/03_function_get_last_endorsements_id.sql # pragma: allowlist secret
+	psql postgresql://data_app:securepassword@localhost:5432/datadb < ./postgres/04_function_get_premiums.sql # pragma: allowlist secret
 
 # Requirements and Dependencies
 export-dependencies:

@@ -1,14 +1,13 @@
 import os
 
-from dotenv import load_dotenv
-from openai import AzureOpenAI
-
 import lancedb
+from dotenv import load_dotenv
+from langchain_openai import AzureChatOpenAI
 
-client = AzureOpenAI(
-    api_key=os.environ["AZURE_OPENAI_API_KEY"],
+client = AzureChatOpenAI(
     api_version=os.environ["AZURE_OPENAI_API_VERSION"],
     azure_endpoint=os.environ["AZURE_OPENAI_API_ENDPOINT"],
+    azure_deployment=os.environ["AZURE_OPENAI_LLM_DEPLOYMENT_NAME"],
 )
 
 
