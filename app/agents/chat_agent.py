@@ -58,12 +58,12 @@ class ChatbotAgent:
             storage=get_storage_db(user_id=user_id) if user_id is not None else None,
             add_history_to_messages=True,
             description=(
-                "You are an expert sql result interpreter."
+                "You are an expert insurance events MongoDB interpreter."
                 "Your task is to provide clear and concise answers in natural language"
             ),
             instructions=(
                 "You will receive a user question."
-                "You will receive the sql result as context"
+                "You will receive MongoDB insurance events context as context."
                 "Your response should be a one-sentence answer that addresses the user's question."
                 "Use only the context to answer the question."
                 "You can not perform any actions or execute any code, just provide a summary based on the context."
@@ -71,6 +71,22 @@ class ChatbotAgent:
                 "If you cannot answer the question, say 'I don't have the information to answer that question'."
             ),
         )
+
+        # old version
+        #     description=(
+        #         "You are an expert sql result interpreter."
+        #         "Your task is to provide clear and concise answers in natural language"
+        #     ),
+        #     instructions=(
+        #         "You will receive a user question."
+        #         "You will receive the sql result as context"
+        #         "Your response should be a one-sentence answer that addresses the user's question."
+        #         "Use only the context to answer the question."
+        #         "You can not perform any actions or execute any code, just provide a summary based on the context."
+        #         "If an action is required, you should say 'I can't perform any action'."
+        #         "If you cannot answer the question, say 'I don't have the information to answer that question'."
+        #     ),
+        # )
 
     async def run(
         self,
@@ -80,6 +96,7 @@ class ChatbotAgent:
         session_id: Optional[str],
     ) -> Tuple[str, str]:
         try:
+            print(f'context from chat_agent: {context}')
             logger.info("Querying Agno agent for summarization")
             logger.info("User question: %s", user_question)
 

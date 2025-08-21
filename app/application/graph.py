@@ -12,6 +12,8 @@ from app.agents.chat_agent import ChatbotAgent
 from app.domain.domain import CbotState
 from app.toolkits.postgres_toolkit import postgres_toolkit
 
+from app.mongodb.retrieve_mongodb import retriever_mongodb
+
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -49,11 +51,26 @@ async def sql_tool(state: CbotState) -> CbotState:
     return state
 
 
+# old version
+#async def cbot_agent(state: CbotState) -> CbotState:
+#    agent = ChatbotAgent()
+#    answer, session_id = await agent.run(
+#        user_question=state.question,
+#        context={"sql_result": state.sql_result},
+#        user_id=state.user_id,
+#        session_id=state.session_id,
+#    )
+#    state.answer = answer
+#    state.session_id = session_id
+#    return state
+
+# new version
 async def cbot_agent(state: CbotState) -> CbotState:
     agent = ChatbotAgent()
+    print(f'context from cbot_agent: {state.context}')
     answer, session_id = await agent.run(
         user_question=state.question,
-        context={"sql_result": state.sql_result},
+        context={"mongodb_context": state.context},
         user_id=state.user_id,
         session_id=state.session_id,
     )
@@ -65,19 +82,34 @@ async def cbot_agent(state: CbotState) -> CbotState:
 async def compile_graph():
     graph = StateGraph(CbotState)
     graph.add_node("guardrail", guardrail_node)
-    graph.add_node("retriever", retriever_node)
-    graph.add_node("sql_generator", sql_generator_node)
-    graph.add_node("sql_tool", sql_tool)
+    graph.add_node("retriever_mongodb", retriever_mongodb)
     graph.add_node("cbot_agent", cbot_agent)
-    graph.add_edge(START, "guardrail")
-    graph.add_edge("guardrail", "retriever")
-    graph.add_edge("retriever", "sql_generator")
-    graph.add_edge("sql_generator", "sql_tool")
-    graph.add_edge("sql_tool", "cbot_agent")
-    graph.add_edge("cbot_agent", END)
-    compiled_graph = graph.compile()
 
+    graph.add_edge(START, "guardrail")
+    graph.add_edge("guardrail", "retriever_mongodb")
+    graph.add_edge("retriever_mongodb", "cbot_agent")
+    graph.add_edge("cbot_agent", END)
+
+    compiled_graph = graph.compile()
     return compiled_graph
+
+# Original graph
+#async def compile_graph():
+#    graph = StateGraph(CbotState)
+#    graph.add_node("guardrail", guardrail_node)
+#    graph.add_node("retriever", retriever_node)
+#    graph.add_node("sql_generator", sql_generator_node)
+#    graph.add_node("sql_tool", sql_tool)
+#    graph.add_node("cbot_agent", cbot_agent)
+#    graph.add_edge(START, "guardrail")
+#    graph.add_edge("guardrail", "retriever")
+#    graph.add_edge("retriever", "sql_generator")
+#    graph.add_edge("sql_generator", "sql_tool")
+#    graph.add_edge("sql_tool", "cbot_agent")
+#    graph.add_edge("cbot_agent", END)
+#    compiled_graph = graph.compile()
+
+#    return compiled_graph
 
 # Export compiled graph for LangGraph Platform
 compile_graph()

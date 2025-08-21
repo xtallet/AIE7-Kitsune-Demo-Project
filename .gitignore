@@ -18,3 +18,5 @@ scripts/synthetic_data.lance
 tmp
 
 *.gradio/
+
+.langgraph_api
