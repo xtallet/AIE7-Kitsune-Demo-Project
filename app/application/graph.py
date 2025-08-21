@@ -78,3 +78,6 @@ async def compile_graph():
     compiled_graph = graph.compile()
 
     return compiled_graph
+
+# Export compiled graph for LangGraph Platform
+compile_graph()

@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "dependencies": ["."],
+  "env": ".env",
+  "python_version": "3.12",
+  "graphs": {
+    "cbot_agent": "app.application.graph:compile_graph"
+  },
+  "assistants": {
+    "agent": {
+      "graph_id": "cbot_agent",
+      "name": "Chatbot Graph",
+      "description": "Chatbot entire Graph."
+    }
+  }
+}
