@@ -20,7 +20,7 @@ up:
 	docker compose up -d --build --detach --remove-orphans
 
 up-infrastructure:
-	docker compose up -d --build --detach --remove-orphans redis postgres mongodb mongo-express
+	docker compose up -d --build --detach --remove-orphans redis postgres mongodb mongo-express qdrant
 
 down:
 	docker compose --profile "*" down --remove-orphans -t 5

@@ -10,9 +10,8 @@ from app.adapters.adapter_factory import (
 )
 from app.agents.chat_agent import ChatbotAgent
 from app.domain.domain import CbotState
+from app.mongodb.retrieve_mongodb_persisted import retriever_mongodb
 from app.toolkits.postgres_toolkit import postgres_toolkit
-
-from app.mongodb.retrieve_mongodb import retriever_mongodb
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -52,7 +51,7 @@ async def sql_tool(state: CbotState) -> CbotState:
 
 
 # old version
-#async def cbot_agent(state: CbotState) -> CbotState:
+# async def cbot_agent(state: CbotState) -> CbotState:
 #    agent = ChatbotAgent()
 #    answer, session_id = await agent.run(
 #        user_question=state.question,
@@ -64,10 +63,11 @@ async def sql_tool(state: CbotState) -> CbotState:
 #    state.session_id = session_id
 #    return state
 
+
 # new version
 async def cbot_agent(state: CbotState) -> CbotState:
     agent = ChatbotAgent()
-    print(f'context from cbot_agent: {state.context}')
+    print(f"context from cbot_agent: {state.context}")
     answer, session_id = await agent.run(
         user_question=state.question,
         context={"mongodb_context": state.context},
@@ -93,8 +93,9 @@ async def compile_graph():
     compiled_graph = graph.compile()
     return compiled_graph
 
+
 # Original graph
-#async def compile_graph():
+# async def compile_graph():
 #    graph = StateGraph(CbotState)
 #    graph.add_node("guardrail", guardrail_node)
 #    graph.add_node("retriever", retriever_node)

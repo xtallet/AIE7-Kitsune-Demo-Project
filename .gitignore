@@ -20,3 +20,4 @@ tmp
 *.gradio/
 
 .langgraph_api
+qdrant_storage

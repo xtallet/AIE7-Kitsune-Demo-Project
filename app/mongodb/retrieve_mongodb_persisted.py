@@ -1,14 +1,15 @@
-import gzip
 import json
-import logging
+import gzip
 import uuid
+import logging
+import os
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
 
 from dotenv import load_dotenv
 from langchain_openai import AzureOpenAIEmbeddings
 from qdrant_client import QdrantClient
-from qdrant_client.http.models import Distance, PointStruct, VectorParams
+from qdrant_client.http.models import VectorParams, Distance, PointStruct
 
 from app.config.settings import AzureOpenAIConfig
 from app.domain.domain import CbotState
@@ -19,7 +20,10 @@ logger = logging.getLogger(__name__)
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 MONGO_DUMP_PATH = PROJECT_ROOT / "app" / "mongodb" / "kitsune.kitsune.json"
 
-# In-memory index globals
+# Qdrant persistent connection (from environment or default to localhost)
+QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
+
+# In-memory index globals (now persistent)
 _qdrant_client: QdrantClient | None = None
 _embeddings: AzureOpenAIEmbeddings | None = None
 _index_built: bool = False
@@ -79,9 +83,7 @@ def safe_get(d: Dict[str, Any], path: str, default=None):
     return cur
 
 
-def flatten_dict(
-    d: Dict[str, Any], prefix: str = "", sep: str = ".", max_depth: int = 6
-):
+def flatten_dict(d: Dict[str, Any], prefix: str = "", sep: str = ".", max_depth: int = 6):
     """
     Flatten nested dict into a single-level dict with dot-separated keys.
     Lists are JSON-serialized to avoid explosion of fields.
@@ -134,11 +136,7 @@ def normalize_event(doc: Dict[str, Any]) -> Tuple[str, Dict[str, Any], str]:
             break
 
     # 6) Extract commonly used fields from the deep payload (with fallbacks)
-    occurred_on = (
-        safe_get(deep, "occurred_on")
-        or safe_get(doc, "createdAt.$date")
-        or safe_get(doc, "createdAt")
-    )
+    occurred_on = safe_get(deep, "occurred_on") or safe_get(doc, "createdAt.$date") or safe_get(doc, "createdAt")
     policy_id = safe_get(deep, "policy_id")
     if not policy_id:
         # fallback: try top-level "keys" list (example: "policy-<uuid>")
@@ -153,11 +151,7 @@ def normalize_event(doc: Dict[str, Any]) -> Tuple[str, Dict[str, Any], str]:
                     policy_id = first
 
     # 7) Extract metadata block (aggregate_id, author, ip, event_version)
-    meta_block = (
-        safe_get(doc, "data.data.metadata")
-        or safe_get(doc, "data.data.data.metadata")
-        or {}
-    )
+    meta_block = safe_get(doc, "data.data.metadata") or safe_get(doc, "data.data.data.metadata") or {}
     aggregate_id = meta_block.get("aggregate_id")
     event_version = meta_block.get("event_version")
     author_username = meta_block.get("author_username")
@@ -193,9 +187,7 @@ def normalize_event(doc: Dict[str, Any]) -> Tuple[str, Dict[str, Any], str]:
     if event_version is not None:
         lines.append(f"Event version: {event_version}")
     if safe_get(doc, "createdAt.$date") or safe_get(doc, "createdAt"):
-        lines.append(
-            f"Inserted in DB: {safe_get(doc, 'createdAt.$date') or safe_get(doc, 'createdAt')}"
-        )
+        lines.append(f"Inserted in DB: {safe_get(doc, 'createdAt.$date') or safe_get(doc, 'createdAt')}")
 
     if flat_deep:
         lines.append("Data details:")
@@ -236,7 +228,17 @@ def _ensure_index_built() -> None:
     load_dotenv(dotenv_path=PROJECT_ROOT / ".env")
     cfg = AzureOpenAIConfig()
 
-    _qdrant_client = QdrantClient(":memory:")
+    # Connect to persistent Qdrant instead of in-memory
+    _qdrant_client = QdrantClient(url=QDRANT_URL)
+    
+    # Test connection
+    try:
+        _qdrant_client.get_collections()
+        logger.info(f"Connected to Qdrant at {QDRANT_URL}")
+    except Exception as e:
+        logger.error(f"Failed to connect to Qdrant at {QDRANT_URL}: {e}")
+        raise RuntimeError(f"Cannot connect to Qdrant: {e}")
+
     _embeddings = AzureOpenAIEmbeddings(
         azure_deployment=cfg.AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME,
         openai_api_version=cfg.AZURE_OPENAI_API_VERSION,
@@ -246,7 +248,17 @@ def _ensure_index_built() -> None:
 
     _embedding_dim = len(_embeddings.embed_query("dimension probe"))
 
-    _qdrant_client.recreate_collection(
+    # Check if collection already exists to avoid reindexing
+    if _qdrant_client.collection_exists(_collection_name):
+        collection_info = _qdrant_client.get_collection(_collection_name)
+        logger.info(f"Collection {_collection_name} already exists with {collection_info.points_count} points")
+        _index_built = True
+        return
+
+    # Collection doesn't exist, create it and index
+    logger.info(f"Creating new collection {_collection_name} and indexing MongoDB dump...")
+    
+    _qdrant_client.create_collection(
         collection_name=_collection_name,
         vectors_config=VectorParams(size=_embedding_dim, distance=Distance.COSINE),
     )
@@ -254,10 +266,10 @@ def _ensure_index_built() -> None:
     # Load and normalize documents using your notebook's exact logic
     raw_docs = list(iter_json_records(MONGO_DUMP_PATH))
     normalized = [normalize_event(doc) for doc in raw_docs]
-
+    
     # Limit to first 1000 docs for quick local testing
     normalized = normalized[:500]
-
+    
     if not normalized:
         logger.warning("MongoDB dump yielded no documents; index will be empty.")
         _index_built = True
@@ -286,16 +298,13 @@ def _ensure_index_built() -> None:
     _qdrant_client.upsert(collection_name=_collection_name, points=points)
 
     _index_built = True
-    logger.info(
-        f"MongoDB dump indexed in in-memory Qdrant (limited to {len(normalized)} docs)."
-    )
+    logger.info(f"MongoDB dump indexed in persistent Qdrant (limited to {len(normalized)} docs).")
 
 
 async def retriever_mongodb(state: CbotState) -> CbotState:
     """
-    Retrieve top-k contexts from the in-memory index built from the MongoDB dump.
+    Retrieve top-k contexts from the persistent Qdrant index built from the MongoDB dump.
     """
-    print(f"state.question: {state.question}")
     _ensure_index_built()
     if _qdrant_client is None or _embeddings is None:
         raise RuntimeError("Retriever initialization failed")
@@ -306,7 +315,6 @@ async def retriever_mongodb(state: CbotState) -> CbotState:
         query_vector=qvec,
         limit=5,
     )
-    print(f"results: {results}")
 
     # Extract context strings from the 'text' field in payload
     contexts: List[str] = []
@@ -316,7 +324,6 @@ async def retriever_mongodb(state: CbotState) -> CbotState:
         if isinstance(text, str) and text.strip():
             contexts.append(text)
 
-    print(f"contexts: {contexts}")
     # Convert list to string for CbotState.context (which expects Optional[str])
     state.context = "\n\n".join(contexts) if contexts else ""
     return state

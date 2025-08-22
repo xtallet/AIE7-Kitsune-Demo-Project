@@ -96,7 +96,7 @@ class ChatbotAgent:
         session_id: Optional[str],
     ) -> Tuple[str, str]:
         try:
-            print(f'context from chat_agent: {context}')
+            print(f"context from chat_agent: {context}")
             logger.info("Querying Agno agent for summarization")
             logger.info("User question: %s", user_question)
 
