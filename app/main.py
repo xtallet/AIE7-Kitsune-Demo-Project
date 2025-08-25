@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
 
 import aiohttp
-from config.settings import LangSmithConfig
+from app.config.settings import LangSmithConfig
 from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel, field_validator
 
@@ -60,9 +60,9 @@ async def _lifespan() -> List[str]:
     logger.info("Testing Postgres connectivity...")
     tool = _get_postgres_tools()
     result = tool.run_query(
-        "SELECT COUNT(cp.policy_reference) AS total_policies FROM get_premiums() cp;"
+        "SELECT COUNT(cp.policy_reference) AS total_policies FROM get_premiumaaas() cp;"
     )
-    if not result:
+    if not result or "Error" in result:
         service_errors.append("Postgres connectivity test failed.")
     logger.info("Postgres connectivity test passed. Total policies: %s", result)
 
