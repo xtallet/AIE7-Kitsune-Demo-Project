@@ -60,9 +60,9 @@ async def _lifespan() -> List[str]:
     logger.info("Testing Postgres connectivity...")
     tool = _get_postgres_tools()
     result = tool.run_query(
-        "SELECT COUNT(cp.policy_reference) AS total_policies FROM get_premiums() cp;"
+        "SELECT COUNT(cp.policy_reference) AS total_policies FROM get_premiumaaas() cp;"
     )
-    if not result:
+    if not result or "Error" in result:
         service_errors.append("Postgres connectivity test failed.")
     logger.info("Postgres connectivity test passed. Total policies: %s", result)
 

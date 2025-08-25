@@ -13,7 +13,7 @@ gcloud-auth:
 
 # Harbor
 build:
-	docker buildx build -t $(cbot_server_image_name) .
+	docker buildx build -t $(cbot_server_image_name):$(cbot_server_version) .
 
 # Local usage
 up:
