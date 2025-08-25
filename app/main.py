@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
 
 import aiohttp
-from config.settings import LangSmithConfig
+from app.config.settings import LangSmithConfig
 from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel, field_validator
 

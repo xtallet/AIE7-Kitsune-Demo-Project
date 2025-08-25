@@ -26,6 +26,7 @@ dependencies = [
     "opentelemetry-sdk>=1.36.0",
     "opentelemetry-exporter-otlp>=1.36.0",
     "aiohttp>=3.12.15",
+    "psycopg-binary>=3.2.9",
 ]
 
 [dependency-groups]
