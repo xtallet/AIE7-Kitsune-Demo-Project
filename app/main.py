@@ -5,6 +5,7 @@ from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
 
 import aiohttp
 from fastapi import FastAPI, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, field_validator
 
 from app.adapters.adapter_factory import (
@@ -39,35 +40,29 @@ async def _lifespan() -> List[str]:
     service_errors = []
 
     # Test Redis cache connectivity
-    logger.info("Testing Redis cache connectivity...")
     cache_adapter = build_cache_adapter()
     if not await cache_adapter.ping():
         service_errors.append("Redis cache connectivity test failed.")
 
     # Test LanceDB connectivity
-    logger.info("Testing LanceDB connectivity...")
     lancedb_adapter = await build_knowledge_base_adapter()
     if not await lancedb_adapter.ping():
         service_errors.append("Knowledge DB connection is not open.")
 
     # Test MongoDB connectivity
-    logger.info("Testing MongoDB connectivity...")
     chat_agent_repo = ChatAgentRepository()
     if not await chat_agent_repo.ping():
         service_errors.append("MongoDB connectivity test failed.")
 
     # Test Postgres connectivity
-    logger.info("Testing Postgres connectivity...")
     tool = _get_postgres_tools()
     result = tool.run_query(
         "SELECT COUNT(cp.policy_reference) AS total_policies FROM get_premiums() cp;"
     )
     if not result or "Error" in result:
         service_errors.append("Postgres connectivity test failed.")
-    logger.info("Postgres connectivity test passed. Total policies: %s", result)
 
     # Test LangSmith connectivity
-    logger.info("Testing LangSmith connectivity...")
     try:
         langsmith_config = LangSmithConfig()
         async with aiohttp.ClientSession() as session:
@@ -80,7 +75,6 @@ async def _lifespan() -> List[str]:
                 if response.status >= 400:
                     raise Exception(f"HTTP error {response.status}")
                 await response.text()  # Ensure we read the response
-        logger.info("LangSmith connectivity test passed.")
     except Exception as e:
         error_msg = f"LangSmith connectivity test failed: {str(e)}"
         service_errors.append(error_msg)
@@ -104,6 +98,14 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 app = FastAPI(lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Configure based on your needs
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["*"],
+)
 
 
 class ChatbotService:

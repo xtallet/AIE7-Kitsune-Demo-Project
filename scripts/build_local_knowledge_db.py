@@ -5,7 +5,7 @@ import sys
 import lancedb
 from dotenv import load_dotenv
 from lancedb.pydantic import LanceModel, Vector
-from langchain_openai import AzureChatOpenAI
+from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 
 env_vars = load_dotenv()
 
@@ -37,6 +37,13 @@ client = AzureChatOpenAI(
     azure_deployment=os.environ["AZURE_OPENAI_LLM_DEPLOYMENT_NAME"],
 )
 
+# Initialize the embeddings client
+embeddings_client = AzureOpenAIEmbeddings(
+    api_version=os.environ["AZURE_OPENAI_API_VERSION"],
+    azure_endpoint=os.environ["AZURE_OPENAI_API_ENDPOINT"],
+    azure_deployment=os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME"),
+)
+
 
 def embed_text(text: str, model: str = "text-embedding-ada-002") -> list[float]:
     """Generates an embedding for the provided text using the specified OpenAI model.
@@ -45,9 +52,7 @@ def embed_text(text: str, model: str = "text-embedding-ada-002") -> list[float]:
     :param model: Embedding model to be used.
     :return: List of float values representing the embedding.
     """
-    model = os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME")
-    response = client.embeddings.create(input=[text], model=model)
-    return response.data[0].embedding
+    return embeddings_client.embed_query(text)
 
 
 def build_knowledge_base():

@@ -160,5 +160,17 @@
     "question": "Has the premium for policy RE2500547 changed over time? ",
     "cot": "Q: Has the premium for policy RE2500547 changed over time? A: We build a reference CTE named policy_reference that holds the policy reference user has asked about. Then, we select the policies from table _policies _policymodel related to this reference and displaying: id: policy_id, version: policy versioning id. 0 means original policy, 1 means first endorsement policy, etc, original_policy_without_endorsement_id: id of the original policy (the one that has version=0), previous_policy_of_endorsement_id: id of previous policy from which the endorsement has been created, inception_date: date where policy takes action, expiry_date: date when policy expires, status: current policy status, premium: policy amount. The SQL query is: WITH _policy_reference AS (SELECT 'RE2500021' AS reference) SELECT pm.id, pm.version, pm.original_policy_without_endorsement_id, pm.previous_policy_of_endorsement_id, pm.inception_date, pm.expiry_date, pm.status, total_gross_premium(pm.id) AS premium FROM _policy_reference _pr INNER JOIN policies_policymodel pm ON _pr.reference = pm.reference ORDER BY pm.version ASC;",
     "sql_query": "WITH _policy_reference AS (SELECT 'RE2500021' AS reference) SELECT pm.id, pm.version, pm.original_policy_without_endorsement_id, pm.previous_policy_of_endorsement_id, pm.inception_date, pm.expiry_date, pm.status, total_gross_premium(pm.id) AS premium FROM _policy_reference _pr INNER JOIN policies_policymodel pm ON _pr.reference = pm.reference ORDER BY pm.version ASC;"
+  },
+  {
+    "chunk_id": "chunk_27",
+    "question": "How many policies do I have?",
+    "cot": "Q: How many policies do I have? A: To count how many policies does the system have we need to count the entries of the table _policies _policymodel using the reference and filtering out the endorsements (is_endorsement = false). The SQL query is: SELECT COUNT(reference) AS total_policies FROM policies_policymodel cp WHERE is_endorsement = false;",
+    "sql_query": "SELECT COUNT(reference) AS total_policies FROM policies_policymodel cp WHERE is_endorsement = false;"
+  },
+  {
+    "chunk_id": "chunk_28",
+    "question": "How many policies do I have in [a certain status] status?",
+    "cot": "Q: How many policies do I have in [a certain status] status? A: To count how many policies does the system have for a certain status we need to count the entries of the table _policies _policymodel using the reference and filtering out the endorsements (is_endorsement = false) and filtering by the status the user provides. The SQL query is: SELECT COUNT(reference) AS total_policies FROM policies_policymodel cp WHERE is_endorsement = false AND status = 'bound';",
+    "sql_query": "SELECT COUNT(reference) AS total_policies FROM policies_policymodel cp WHERE is_endorsement = false AND status = 'bound';"
   }
 ]

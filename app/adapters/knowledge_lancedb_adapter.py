@@ -32,9 +32,6 @@ class KnowledgeLanceDBAdapter:
         try:
             db = await connect_async(db_path)
             table = await db.open_table(table_name)
-            logging.info(
-                f"Successfully connected to LanceDB and opened table: {table_name}"
-            )
             return cls(db, table, embedding_model_name, embedding_client)
         except Exception as e:
             logging.exception("Failed to initialize LanceDB adapter", e)
@@ -90,7 +87,6 @@ class KnowledgeLanceDBAdapter:
         try:
             if not self.db.is_open():
                 raise RuntimeError("Knowledge base connection is not open.")
-            logger.info("Knowledge base ping successful.")
             return True
         except Exception as e:
             logger.exception("Knowledge base connectivity test failed", exc_info=e)

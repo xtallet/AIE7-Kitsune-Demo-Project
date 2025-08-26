@@ -20,7 +20,7 @@ async def guardrail_node(state: CbotState) -> CbotState:
     guardrail_adapter = build_guardrail_adapter()
     is_valid = await guardrail_adapter.validate_question(state.question)
     if not is_valid:
-        raise StopAgentRun("Question does not meet the guardrails criteria.")
+        state.answer = "I am sorry, but I cannot assist with that request as it falls outside my area of expertise."
 
     return state
 
@@ -62,6 +62,13 @@ async def cbot_agent(state: CbotState) -> CbotState:
     return state
 
 
+def should_continue_after_guardrail(state: CbotState) -> str:
+    if state.answer:  # Guardrail generated an answer (blocked request)
+        return "END"
+    else:
+        return "retriever"
+
+
 async def compile_graph():
     graph = StateGraph(CbotState)
     graph.add_node("guardrail", guardrail_node)
@@ -69,8 +76,14 @@ async def compile_graph():
     graph.add_node("sql_generator", sql_generator_node)
     graph.add_node("sql_tool", sql_tool)
     graph.add_node("cbot_agent", cbot_agent)
+
     graph.add_edge(START, "guardrail")
-    graph.add_edge("guardrail", "retriever")
+    graph.add_conditional_edges(
+        "guardrail",
+        should_continue_after_guardrail,
+        {"END": END, "retriever": "retriever"},
+    )
+
     graph.add_edge("retriever", "sql_generator")
     graph.add_edge("sql_generator", "sql_tool")
     graph.add_edge("sql_tool", "cbot_agent")

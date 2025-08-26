@@ -46,11 +46,12 @@ class TestGraph:
         mock_adapter.validate_question.return_value = False
         mock_build_guardrail_adapter.return_value = mock_adapter
 
-        with pytest.raises(StopAgentRun) as excinfo:
-            await guardrail_node(self.state)
+        self.state = await guardrail_node(self.state)
 
-        mock_adapter.validate_question.assert_awaited_once_with(self.state.question)
-        assert "Question does not meet the guardrails criteria" in str(excinfo.value)
+        assert (
+            self.state.answer
+            == "I am sorry, but I cannot assist with that request as it falls outside my area of expertise."
+        )
 
     @pytest.mark.asyncio
     @patch("app.application.graph.build_knowledge_base_adapter")
