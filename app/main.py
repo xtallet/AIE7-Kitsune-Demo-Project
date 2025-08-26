@@ -4,7 +4,6 @@ from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
 
 import aiohttp
-from app.config.settings import LangSmithConfig
 from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel, field_validator
 
@@ -13,6 +12,7 @@ from app.adapters.adapter_factory import (
     build_knowledge_base_adapter,
 )
 from app.application.graph import compile_graph
+from app.config.settings import LangSmithConfig
 from app.domain.domain import CbotState
 from app.repositories.chat_agent_repository import ChatAgentRepository
 from app.toolkits.postgres_toolkit import _get_postgres_tools
@@ -60,7 +60,7 @@ async def _lifespan() -> List[str]:
     logger.info("Testing Postgres connectivity...")
     tool = _get_postgres_tools()
     result = tool.run_query(
-        "SELECT COUNT(cp.policy_reference) AS total_policies FROM get_premiumaaas() cp;"
+        "SELECT COUNT(cp.policy_reference) AS total_policies FROM get_premiums() cp;"
     )
     if not result or "Error" in result:
         service_errors.append("Postgres connectivity test failed.")
